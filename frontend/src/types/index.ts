@@ -125,6 +125,11 @@ export interface Console {
   capabilities?: string[];
   last_heartbeat?: string;
   agent_count?: number;
+  vnc_enabled?: boolean;
+  vnc_host?: string;
+  vnc_port?: number;
+  vnc_password_encrypted?: string;
+  vnc_last_connected?: string;
   created_at: string;
   updated_at: string;
 }
