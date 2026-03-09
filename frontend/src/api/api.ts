@@ -47,3 +47,25 @@ export const waitingApi = {
   add: (data: any) => api.post('/waiting', data),
   complete: (id: number) => api.put(`/waiting/${id}/complete`),
 };
+
+export const agentsApi = {
+  getAll: () => api.get('/agents'),
+  getById: (id: number) => api.get(`/agents/${id}`),
+  create: (data: any) => api.post('/agents', data),
+  update: (id: number, data: any) => api.put(`/agents/${id}`, data),
+  delete: (id: number) => api.delete(`/agents/${id}`),
+  addGoal: (id: number, data: any) => api.post(`/agents/${id}/goals`, data),
+  logActivity: (id: number, data: any) => api.post(`/agents/${id}/activity`, data),
+  addAgenda: (id: number, data: any) => api.post(`/agents/${id}/agenda`, data),
+  getCosts: (id: number, params?: any) => api.get(`/agents/${id}/costs`, { params }),
+  logCost: (id: number, data: any) => api.post(`/agents/${id}/costs`, data),
+};
+
+export const consolesApi = {
+  getAll: () => api.get('/consoles'),
+  getById: (id: number) => api.get(`/consoles/${id}`),
+  create: (data: any) => api.post('/consoles', data),
+  update: (id: number, data: any) => api.put(`/consoles/${id}`, data),
+  delete: (id: number) => api.delete(`/consoles/${id}`),
+  heartbeat: (id: number, data: any) => api.post(`/consoles/${id}/heartbeat`, data),
+};

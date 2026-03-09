@@ -6,6 +6,7 @@ import AllProjects from './pages/AllProjects';
 import Blockers from './pages/Blockers';
 import ActivityFeed from './pages/ActivityFeed';
 import SocialMedia from './pages/SocialMedia';
+import Team from './pages/Team';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/blockers" element={<Blockers />} />
           <Route path="/activity" element={<ActivityFeed />} />
           <Route path="/social-media" element={<SocialMedia />} />
+          <Route path="/team" element={<Team />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

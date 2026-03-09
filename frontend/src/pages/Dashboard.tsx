@@ -5,7 +5,9 @@ import ProjectCard from '../components/ProjectCard';
 import StatsCard from '../components/StatsCard';
 import BlockerCard from '../components/BlockerCard';
 import WaitingOnTony from '../components/WaitingOnTony';
-import { FolderKanban, CheckCircle2, AlertCircle, Bell } from 'lucide-react';
+import Modal from '../components/Modal';
+import ProjectForm from '../components/ProjectForm';
+import { FolderKanban, CheckCircle2, AlertCircle, Bell, Plus } from 'lucide-react';
 
 function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -14,6 +16,7 @@ function Dashboard() {
   const [tasksInProgress, setTasksInProgress] = useState<Task[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -114,9 +117,18 @@ function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Active Projects</h2>
-          <a href="/projects" className="text-sm text-rlt-blue hover:underline">
-            View all
-          </a>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowProjectModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </button>
+            <a href="/projects" className="text-sm text-rlt-blue hover:underline flex items-center">
+              View all
+            </a>
+          </div>
         </div>
         {projects.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -159,6 +171,21 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* New Project Modal */}
+      <Modal
+        isOpen={showProjectModal}
+        onClose={() => setShowProjectModal(false)}
+        title="Create New Project"
+      >
+        <ProjectForm
+          onSuccess={() => {
+            setShowProjectModal(false);
+            loadDashboard();
+          }}
+          onCancel={() => setShowProjectModal(false)}
+        />
+      </Modal>
     </div>
   );
 }

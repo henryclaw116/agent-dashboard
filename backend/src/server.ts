@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import { WebSocketServer } from 'ws';
 import http from 'http';
+import { initializeDatabase } from './db-init';
 
 dotenv.config();
 
@@ -18,22 +19,23 @@ import dashboardRoutes from './routes/dashboard.routes';
 import waitingRoutes from './routes/waiting.routes';
 import socialMediaRoutes from './routes/socialMedia.routes';
 import viralContentRoutes from './routes/viralContent.routes';
+import agentRoutes from './routes/agent.routes';
+import consoleRoutes from './routes/console.routes';
+import workflowRoutes from './routes/workflow.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
 const WS_PORT = process.env.WS_PORT || 3003;
 
+// Placeholder for broadcast (will be set when WSS is initialized)
+export let broadcast: (data: any) => void = () => {};
+
 // Database connection
+// Supabase requires SSL
 export const db = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
-
-db.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err);
-  } else {
-    console.log('✅ Database connected at:', res.rows[0].now);
+  ssl: {
+    rejectUnauthorized: false
   }
 });
 
@@ -70,6 +72,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/waiting', waitingRoutes);
 app.use('/api/social-media', socialMediaRoutes);
 app.use('/api/viral-content', viralContentRoutes);
+app.use('/api/agents', agentRoutes);
+app.use('/api/consoles', consoleRoutes);
+app.use('/api/workflows', workflowRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -85,49 +90,71 @@ app.use((err: Error, req: express.Request, res: express.Response, next: any) => 
   });
 });
 
-// Start HTTP server
-const server = http.createServer(app);
-server.listen(PORT, () => {
-  console.log(`🚀 Agent Dashboard API running on port ${PORT}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    console.log('🔗 Connecting to database...');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@')); // Log URL with masked password
+    
+    // Test connection
+    const testResult = await db.query('SELECT NOW()');
+    console.log('✅ Database connected at:', testResult.rows[0].now);
+    
+    // Skip auto-initialization - will do manually
+    // await initializeDatabase(db);
+    console.log('⏭️  Skipping auto-initialization (will do manually)');
 
-// WebSocket server for real-time updates
-const wss = new WebSocketServer({ port: parseInt(WS_PORT as string) });
-
-wss.on('connection', (ws) => {
-  console.log('WebSocket client connected');
-
-  ws.on('message', (message) => {
-    console.log('Received:', message.toString());
-  });
-
-  ws.on('close', () => {
-    console.log('WebSocket client disconnected');
-  });
-
-  // Send welcome message
-  ws.send(JSON.stringify({ type: 'connected', message: 'Dashboard WebSocket connected' }));
-});
-
-// Broadcast function for real-time updates
-export const broadcast = (data: any) => {
-  wss.clients.forEach((client) => {
-    if (client.readyState === 1) { // OPEN
-      client.send(JSON.stringify(data));
-    }
-  });
-};
-
-console.log(`🔌 WebSocket server running on port ${WS_PORT}`);
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, closing servers...');
-  wss.close();
-  server.close(() => {
-    db.end(() => {
-      console.log('Servers closed');
-      process.exit(0);
+    // Start HTTP server after DB is ready
+    const server = http.createServer(app);
+    server.listen(PORT, () => {
+      console.log(`🚀 Agent Dashboard API running on port ${PORT}`);
     });
-  });
-});
+
+    // WebSocket server for real-time updates
+    const wss = new WebSocketServer({ port: parseInt(WS_PORT as string) });
+
+    wss.on('connection', (ws) => {
+      console.log('WebSocket client connected');
+
+      ws.on('message', (message) => {
+        console.log('Received:', message.toString());
+      });
+
+      ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+      });
+
+      // Send welcome message
+      ws.send(JSON.stringify({ type: 'connected', message: 'Dashboard WebSocket connected' }));
+    });
+
+    // Broadcast function for real-time updates
+    broadcast = (data: any) => {
+      wss.clients.forEach((client) => {
+        if (client.readyState === 1) { // OPEN
+          client.send(JSON.stringify(data));
+        }
+      });
+    };
+
+    console.log(`🔌 WebSocket server running on port ${WS_PORT}`);
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, closing servers...');
+      wss.close();
+      server.close(() => {
+        db.end(() => {
+          console.log('Servers closed');
+          process.exit(0);
+        });
+      });
+    });
+  } catch (err) {
+    console.error('❌ Server startup failed:', err);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

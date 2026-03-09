@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, project_id, assigned_to } = req.query;
     
-    let query = 'SELECT t.*, p.name as project_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id WHERE 1=1';
+    let query = 'SELECT t.*, p.name as project_name, a.name as agent_name FROM tasks t LEFT JOIN projects p ON t.project_id = p.id LEFT JOIN agents a ON t.agent_id = a.id WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
     
@@ -53,6 +53,7 @@ router.post('/', async (req, res) => {
       description,
       priority,
       assigned_to,
+      agent_id,
       estimated_hours,
       due_date
     } = req.body;
@@ -62,10 +63,10 @@ router.post('/', async (req, res) => {
     }
     
     const result = await db.query(`
-      INSERT INTO tasks (project_id, phase_id, title, description, priority, assigned_to, estimated_hours, due_date)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO tasks (project_id, phase_id, title, description, priority, assigned_to, agent_id, estimated_hours, due_date)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
-    `, [project_id, phase_id, title, description, priority || 2, assigned_to, estimated_hours, due_date]);
+    `, [project_id, phase_id, title, description, priority || 2, assigned_to, agent_id, estimated_hours, due_date]);
     
     // Log activity
     await db.query(`
