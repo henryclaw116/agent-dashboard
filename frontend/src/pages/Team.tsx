@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import AgentForm from '../components/AgentForm';
 import ConsoleForm from '../components/ConsoleForm';
 import WorkflowBuilder from '../components/WorkflowBuilder';
+import RemoteDesktopModal from '../components/RemoteDesktopModal';
 import { Agent, Console } from '../types';
 
 function Team() {
@@ -17,6 +18,7 @@ function Team() {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [showConsoleModal, setShowConsoleModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workflows'>('details');
+  const [remoteDesktopConsole, setRemoteDesktopConsole] = useState<Console | null>(null);
 
   useEffect(() => {
     loadData();
@@ -241,8 +243,19 @@ function Team() {
                   {console.status}
                 </span>
               </div>
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">{console.agent_count}</span> agents assigned
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{console.agent_count}</span> agents assigned
+                </div>
+                {console.vnc_enabled && (
+                  <button
+                    onClick={() => setRemoteDesktopConsole(console)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    <Server className="w-4 h-4" />
+                    Connect
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -427,6 +440,15 @@ function Team() {
           onCancel={() => setShowConsoleModal(false)}
         />
       </Modal>
+
+      {/* Remote Desktop Modal */}
+      {remoteDesktopConsole && (
+        <RemoteDesktopModal
+          consoleId={remoteDesktopConsole.id}
+          consoleName={remoteDesktopConsole.name}
+          onClose={() => setRemoteDesktopConsole(null)}
+        />
+      )}
     </div>
   );
 }
