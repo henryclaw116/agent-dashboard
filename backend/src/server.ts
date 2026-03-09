@@ -23,6 +23,7 @@ import viralContentRoutes from './routes/viralContent.routes';
 import agentRoutes from './routes/agent.routes';
 import consoleRoutes from './routes/console.routes';
 import workflowRoutes from './routes/workflow.routes';
+import vncRoutes from './routes/vnc.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -76,6 +77,7 @@ app.use('/api/viral-content', viralContentRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/consoles', consoleRoutes);
 app.use('/api/workflows', workflowRoutes);
+app.use('/api/vnc', vncRoutes);
 
 // 404 handler
 app.use((req, res) => {
