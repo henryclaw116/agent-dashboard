@@ -5,30 +5,7 @@ import Modal from '../components/Modal';
 import AgentForm from '../components/AgentForm';
 import ConsoleForm from '../components/ConsoleForm';
 import WorkflowBuilder from '../components/WorkflowBuilder';
-
-interface Agent {
-  id: number;
-  name: string;
-  role: string;
-  status: string;
-  console_name?: string;
-  console_status?: string;
-  goal_count: number;
-  task_count: number;
-  avatar_url?: string;
-  personality?: string;
-  model?: string;
-  daily_cost?: number;
-  monthly_cost?: number;
-}
-
-interface Console {
-  id: number;
-  name: string;
-  type: string;
-  status: string;
-  agent_count: number;
-}
+import { Agent, Console } from '../types';
 
 function Team() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -37,6 +14,7 @@ function Team() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showAgentFormModal, setShowAgentFormModal] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [showConsoleModal, setShowConsoleModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workflows'>('details');
 
@@ -380,7 +358,13 @@ function Team() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <button className="flex-1 px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700">
+                <button 
+                  onClick={() => {
+                    setEditingAgent(selectedAgent);
+                    setSelectedAgent(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700"
+                >
                   Edit Agent
                 </button>
                 <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
@@ -409,6 +393,23 @@ function Team() {
             loadData();
           }}
           onCancel={() => setShowAgentFormModal(false)}
+        />
+      </Modal>
+
+      {/* Edit Agent Form Modal */}
+      <Modal
+        isOpen={!!editingAgent}
+        onClose={() => setEditingAgent(null)}
+        title="Edit Agent"
+        size="lg"
+      >
+        <AgentForm
+          agent={editingAgent || undefined}
+          onSuccess={() => {
+            setEditingAgent(null);
+            loadData();
+          }}
+          onCancel={() => setEditingAgent(null)}
         />
       </Modal>
 
