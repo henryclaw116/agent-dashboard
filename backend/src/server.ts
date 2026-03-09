@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { initializeDatabase } from './db-init';
+import { setupVNCProxy } from './vnc-proxy';
 
 dotenv.config();
 
@@ -106,6 +107,10 @@ async function startServer() {
 
     // Start HTTP server after DB is ready
     const server = http.createServer(app);
+    
+    // Setup VNC WebSocket proxy
+    setupVNCProxy(server);
+    
     server.listen(PORT, () => {
       console.log(`🚀 Agent Dashboard API running on port ${PORT}`);
     });
