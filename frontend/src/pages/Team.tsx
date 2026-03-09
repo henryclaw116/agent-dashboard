@@ -4,6 +4,7 @@ import { Users, Bot, Server, Plus, Activity, Calendar } from 'lucide-react';
 import Modal from '../components/Modal';
 import AgentForm from '../components/AgentForm';
 import ConsoleForm from '../components/ConsoleForm';
+import WorkflowBuilder from '../components/WorkflowBuilder';
 
 interface Agent {
   id: number;
@@ -37,6 +38,7 @@ function Team() {
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showAgentFormModal, setShowAgentFormModal] = useState(false);
   const [showConsoleModal, setShowConsoleModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'workflows'>('details');
 
   useEffect(() => {
     loadData();
@@ -273,88 +275,124 @@ function Team() {
       {selectedAgent && (
         <Modal
           isOpen={!!selectedAgent}
-          onClose={() => setSelectedAgent(null)}
+          onClose={() => {
+            setSelectedAgent(null);
+            setActiveTab('details');
+          }}
           title={selectedAgent.name}
-          size="lg"
+          size="xl"
         >
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Role</h4>
-              <p className="text-gray-600">{selectedAgent.role}</p>
-            </div>
-
-            {selectedAgent.personality && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Personality</h4>
-                <p className="text-gray-600">{selectedAgent.personality}</p>
-              </div>
-            )}
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Status</h4>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(selectedAgent.status)}`}>
-                {selectedAgent.status}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Active Goals</h4>
-                <p className="text-2xl font-bold text-rlt-blue">{selectedAgent.goal_count}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Assigned Tasks</h4>
-                <p className="text-2xl font-bold text-rlt-blue">{selectedAgent.task_count}</p>
-              </div>
-            </div>
-
-            {selectedAgent.model && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">AI Model</h4>
-                <p className="text-gray-600 font-mono text-sm">{selectedAgent.model}</p>
-              </div>
-            )}
-
-            {(selectedAgent.daily_cost !== undefined || selectedAgent.monthly_cost !== undefined) && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Usage Costs</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-blue-50 px-4 py-3 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-1">Today</p>
-                    <p className="text-2xl font-bold text-blue-600">${(selectedAgent.daily_cost || 0).toFixed(4)}</p>
-                  </div>
-                  <div className="bg-purple-50 px-4 py-3 rounded-lg">
-                    <p className="text-xs text-gray-600 mb-1">This Month</p>
-                    <p className="text-2xl font-bold text-purple-600">${(selectedAgent.monthly_cost || 0).toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedAgent.console_name && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Console</h4>
-                <div className="flex items-center gap-2">
-                  <Server className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-700">{selectedAgent.console_name}</span>
-                  {selectedAgent.console_status && (
-                    <span className={`ml-auto px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedAgent.console_status)}`}>
-                      {selectedAgent.console_status}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-4">
-              <button className="flex-1 px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700">
-                Edit Agent
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="flex gap-8">
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'details'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Details
               </button>
-              <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
-                View Activity
+              <button
+                onClick={() => setActiveTab('workflows')}
+                className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'workflows'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Workflows
               </button>
-            </div>
+            </nav>
           </div>
+
+          {/* Tab Content */}
+          {activeTab === 'details' && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Role</h4>
+                <p className="text-gray-600">{selectedAgent.role}</p>
+              </div>
+
+              {selectedAgent.personality && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Personality</h4>
+                  <p className="text-gray-600">{selectedAgent.personality}</p>
+                </div>
+              )}
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Status</h4>
+                <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(selectedAgent.status)}`}>
+                  {selectedAgent.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Active Goals</h4>
+                  <p className="text-2xl font-bold text-rlt-blue">{selectedAgent.goal_count}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Assigned Tasks</h4>
+                  <p className="text-2xl font-bold text-rlt-blue">{selectedAgent.task_count}</p>
+                </div>
+              </div>
+
+              {selectedAgent.model && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">AI Model</h4>
+                  <p className="text-gray-600 font-mono text-sm">{selectedAgent.model}</p>
+                </div>
+              )}
+
+              {(selectedAgent.daily_cost !== undefined || selectedAgent.monthly_cost !== undefined) && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Usage Costs</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 px-4 py-3 rounded-lg">
+                      <p className="text-xs text-gray-600 mb-1">Today</p>
+                      <p className="text-2xl font-bold text-blue-600">${(selectedAgent.daily_cost || 0).toFixed(4)}</p>
+                    </div>
+                    <div className="bg-purple-50 px-4 py-3 rounded-lg">
+                      <p className="text-xs text-gray-600 mb-1">This Month</p>
+                      <p className="text-2xl font-bold text-purple-600">${(selectedAgent.monthly_cost || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedAgent.console_name && (
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Console</h4>
+                  <div className="flex items-center gap-2">
+                    <Server className="w-5 h-5 text-gray-400" />
+                    <span className="text-gray-700">{selectedAgent.console_name}</span>
+                    {selectedAgent.console_status && (
+                      <span className={`ml-auto px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedAgent.console_status)}`}>
+                        {selectedAgent.console_status}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button className="flex-1 px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700">
+                  Edit Agent
+                </button>
+                <button className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                  View Activity
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'workflows' && (
+            <WorkflowBuilder agentId={selectedAgent.id} agentName={selectedAgent.name} />
+          )}
         </Modal>
       )}
 

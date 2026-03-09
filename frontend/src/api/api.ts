@@ -69,3 +69,16 @@ export const consolesApi = {
   delete: (id: number) => api.delete(`/consoles/${id}`),
   heartbeat: (id: number, data: any) => api.post(`/consoles/${id}/heartbeat`, data),
 };
+
+export const workflowsApi = {
+  getForAgent: (agentId: number) => api.get(`/workflows/agent/${agentId}`),
+  getById: (id: number) => api.get(`/workflows/${id}`),
+  create: (data: any) => api.post('/workflows', data),
+  update: (id: number, data: any) => api.put(`/workflows/${id}`, data),
+  delete: (id: number) => api.delete(`/workflows/${id}`),
+  createStep: (workflowId: number, data: any) => api.post(`/workflows/${workflowId}/steps`, data),
+  updateStep: (stepId: number, data: any) => api.put(`/workflows/steps/${stepId}`, data),
+  deleteStep: (stepId: number) => api.delete(`/workflows/steps/${stepId}`),
+  reorderSteps: (workflowId: number, stepOrders: Array<{ id: number; step_order: number }>) => 
+    api.put(`/workflows/${workflowId}/steps/reorder`, { stepOrders }),
+};
