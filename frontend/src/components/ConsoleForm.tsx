@@ -14,7 +14,11 @@ function ConsoleForm({ consoleData, onSuccess, onCancel }: ConsoleFormProps) {
     type: consoleData?.type || 'openclaw',
     description: consoleData?.description || '',
     status: consoleData?.status || 'offline',
-    capabilities: consoleData?.capabilities?.join(', ') || ''
+    capabilities: consoleData?.capabilities?.join(', ') || '',
+    vnc_enabled: consoleData?.vnc_enabled || false,
+    vnc_host: consoleData?.vnc_host || '',
+    vnc_port: consoleData?.vnc_port || 5900,
+    vnc_password_encrypted: consoleData?.vnc_password_encrypted || ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +126,71 @@ function ConsoleForm({ consoleData, onSuccess, onCancel }: ConsoleFormProps) {
           <option value="offline">Offline</option>
           <option value="error">Error</option>
         </select>
+      </div>
+
+      {/* VNC Remote Desktop Configuration */}
+      <div className="border-t pt-4 mt-4">
+        <h4 className="font-semibold text-gray-900 mb-3">Remote Desktop (VNC)</h4>
+        
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            type="checkbox"
+            id="vnc_enabled"
+            checked={formData.vnc_enabled}
+            onChange={(e) => setFormData({ ...formData, vnc_enabled: e.target.checked })}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="vnc_enabled" className="text-sm font-medium text-gray-700">
+            Enable remote desktop access via VNC
+          </label>
+        </div>
+
+        {formData.vnc_enabled && (
+          <div className="space-y-3 ml-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                VNC Host (IP or hostname) *
+              </label>
+              <input
+                type="text"
+                required={formData.vnc_enabled}
+                value={formData.vnc_host}
+                onChange={(e) => setFormData({ ...formData, vnc_host: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue"
+                placeholder="192.168.1.100 or vnc.example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                VNC Port
+              </label>
+              <input
+                type="number"
+                value={formData.vnc_port}
+                onChange={(e) => setFormData({ ...formData, vnc_port: parseInt(e.target.value) || 5900 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue"
+                placeholder="5900 (default)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                VNC Password (optional)
+              </label>
+              <input
+                type="password"
+                value={formData.vnc_password_encrypted}
+                onChange={(e) => setFormData({ ...formData, vnc_password_encrypted: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue"
+                placeholder="Leave blank if no password"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Password will be encrypted before storage
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
