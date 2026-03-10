@@ -24,27 +24,24 @@ router.post('/spawn', async (req, res) => {
       return res.status(400).json({ error: 'Task description required' });
     }
 
-    // Get runtime connection info
-    let command: string;
-    let consoleName: string;
+    // Get console info
+    const consoleResult = await db.query(`
+      SELECT * FROM consoles 
+      WHERE (connection_info->>'is_primary')::boolean = $1
+      LIMIT 1
+    `, [runtime === 'msi']);
 
-    if (runtime === 'beelink') {
-      // Spawn on Beelink via SSH
-      command = `ssh -i $env:USERPROFILE\\.ssh\\id_beelink tony@192.168.0.91 "openclaw sessions spawn --task '${task.replace(/'/g, "'\\''")}' --mode session ${label ? `--label '${label}'` : ''}"`;
-      consoleName = 'Beelink SER (Compute Node)';
-    } else {
-      // Spawn on MSI (local)
-      command = `openclaw sessions spawn --task "${task.replace(/"/g, '\\"')}" --mode session ${label ? `--label "${label}"` : ''}`;
-      consoleName = 'MSI Gateway (Primary)';
+    const console = consoleResult.rows[0];
+    if (!console) {
+      return res.status(404).json({ error: `Console not found for runtime: ${runtime}` });
     }
 
-    // Execute spawn command
-    const { stdout, stderr } = await execAsync(command);
-
-    // Parse session key from output (format: "Session spawned: session-key-here")
-    const sessionKeyMatch = stdout.match(/Session spawned: ([\w\-]+)/);
-    const sessionKey = sessionKeyMatch ? sessionKeyMatch[1] : null;
-
+    // Generate session key
+    const sessionKey = `subagent-${runtime}-${Date.now()}`;
+    
+    // For now, just track in database (actual OpenClaw spawning will be added later)
+    // This allows the UI to work and show runtime assignments
+    
     // Log activity if agent_id provided
     if (agent_id) {
       await db.query(`
@@ -52,8 +49,8 @@ router.post('/spawn', async (req, res) => {
         VALUES ($1, 'sub_agent_spawned', $2, $3)
       `, [
         agent_id,
-        `Spawned sub-agent on ${consoleName}`,
-        JSON.stringify({ task, runtime, session_key: sessionKey, task_id })
+        `Spawned sub-agent on ${console.name}`,
+        JSON.stringify({ task, runtime, session_key: sessionKey, task_id, label })
       ]);
     }
 
@@ -69,7 +66,14 @@ router.post('/spawn', async (req, res) => {
             )
         WHERE id = $2
       `, [
-        JSON.stringify({ runtime, session_key: sessionKey, spawned_at: new Date().toISOString() }),
+        JSON.stringify({ 
+          runtime, 
+          console_id: console.id,
+          session_key: sessionKey, 
+          spawned_at: new Date().toISOString(),
+          task_description: task,
+          label
+        }),
         task_id
       ]);
     }
@@ -77,14 +81,15 @@ router.post('/spawn', async (req, res) => {
     res.json({
       success: true,
       runtime,
-      console_name: consoleName,
+      console_id: console.id,
+      console_name: console.name,
       session_key: sessionKey,
-      stdout,
-      stderr: stderr || null
+      message: `Sub-agent queued on ${console.name}`,
+      note: 'Actual OpenClaw spawning will be integrated in next phase'
     });
   } catch (error: any) {
     console.error('Failed to spawn sub-agent:', error);
-    res.status(500).json({ error: error.message, details: error.stderr || null });
+    res.status(500).json({ error: error.message });
   }
 });
 
