@@ -26,6 +26,7 @@ import workflowRoutes from './routes/workflow.routes';
 import vncRoutes from './routes/vnc.routes';
 import subagentRoutes from './routes/subagent.routes';
 import agentSpawnRoutes from './routes/agentSpawn.routes';
+import financialsRoutes from './routes/financials.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -82,6 +83,7 @@ app.use('/api/consoles', consoleRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/vnc', vncRoutes);
 app.use('/api/subagents', subagentRoutes);
+app.use('/api/financials', financialsRoutes);
 
 // 404 handler
 app.use((req, res) => {
