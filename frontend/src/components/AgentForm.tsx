@@ -17,7 +17,8 @@ function AgentForm({ agent, onSuccess, onCancel }: AgentFormProps) {
     prompt: agent?.prompt || '',
     status: agent?.status || 'idle',
     console_id: agent?.console_id || '',
-    model: agent?.model || 'anthropic/claude-sonnet-4-5'
+    model: agent?.model || 'anthropic/claude-sonnet-4-5',
+    preferred_runtime: agent?.preferred_runtime || 'msi'
   });
   const [consoles, setConsoles] = useState<Console[]>([]);
   const [loading, setLoading] = useState(false);
@@ -137,7 +138,7 @@ function AgentForm({ agent, onSuccess, onCancel }: AgentFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Status
@@ -152,6 +153,23 @@ function AgentForm({ agent, onSuccess, onCancel }: AgentFormProps) {
             <option value="paused">Paused</option>
             <option value="error">Error</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Preferred Runtime 🖥️
+          </label>
+          <select
+            value={formData.preferred_runtime}
+            onChange={(e) => setFormData({ ...formData, preferred_runtime: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue"
+          >
+            <option value="msi">MSI (Primary Gateway)</option>
+            <option value="beelink">Beelink (Compute Node)</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Where this agent runs tasks by default
+          </p>
         </div>
 
         <div>

@@ -107,6 +107,7 @@ export interface Agent {
   console_id?: number;
   console_name?: string;
   console_status?: string;
+  preferred_runtime?: 'msi' | 'beelink';
   goal_count?: number;
   task_count?: number;
   daily_cost?: number;
