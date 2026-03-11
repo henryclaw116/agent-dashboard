@@ -28,6 +28,7 @@ import subagentRoutes from './routes/subagent.routes';
 import agentSpawnRoutes from './routes/agentSpawn.routes';
 import financialsRoutes from './routes/financials.routes';
 import { createCostsRouter } from './routes/costs.routes';
+import { createPipelineRouter } from './routes/pipeline.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -86,6 +87,7 @@ app.use('/api/vnc', vncRoutes);
 app.use('/api/subagents', subagentRoutes);
 app.use('/api/financials', financialsRoutes);
 app.use('/api/costs', createCostsRouter(db));
+app.use('/api/pipeline', createPipelineRouter(db));
 
 // 404 handler
 app.use((req, res) => {

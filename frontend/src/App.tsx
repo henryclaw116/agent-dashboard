@@ -8,6 +8,7 @@ import ActivityFeed from './pages/ActivityFeed';
 import SocialMedia from './pages/SocialMedia';
 import Team from './pages/Team';
 import Financials from './pages/Financials';
+import Pipeline from './pages/Pipeline';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/social-media" element={<SocialMedia />} />
           <Route path="/team" element={<Team />} />
           <Route path="/financials" element={<Financials />} />
+          <Route path="/pipeline" element={<Pipeline />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
