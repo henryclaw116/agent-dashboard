@@ -48,17 +48,17 @@ export class VNCProxyService {
         return;
       }
       
-      const console = result.rows[0];
+      const consoleData = result.rows[0];
       
-      if (!console.vnc_enabled) {
+      if (!consoleData.vnc_enabled) {
         console.error(`[VNC Proxy] VNC not enabled for console ${consoleId}`);
         ws.close(1008, 'VNC not enabled for this console');
         return;
       }
       
       // Connect to VNC server
-      const vncHost = console.vnc_host;
-      const vncPort = console.vnc_port || 5900;
+      const vncHost = consoleData.vnc_host;
+      const vncPort = consoleData.vnc_port || 5900;
       
       console.log(`[VNC Proxy] Connecting to VNC server ${vncHost}:${vncPort}`);
       

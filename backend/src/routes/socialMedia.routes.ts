@@ -31,6 +31,56 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB limit
 });
 
+// ===== FEED ROUTE (for dashboard) =====
+
+/**
+ * GET /api/social-media/feeds
+ * Get all social media items (videos + content) for dashboard feed
+ */
+router.get('/feeds', async (req, res) => {
+  try {
+    // Get videos
+    const videosResult = await db.query(`
+      SELECT 
+        id,
+        'video' as type,
+        original_filename as title,
+        editing_instructions as description,
+        status,
+        uploaded_at as created_at,
+        tags
+      FROM video_uploads
+      ORDER BY uploaded_at DESC
+      LIMIT 10
+    `);
+    
+    // Get content
+    const contentResult = await db.query(`
+      SELECT 
+        id,
+        'content' as type,
+        title,
+        description,
+        status,
+        created_at,
+        tags,
+        platform
+      FROM social_content
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+    
+    // Combine and sort by date
+    const feeds = [...videosResult.rows, ...contentResult.rows]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 20);
+    
+    res.json({ success: true, feeds });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ===== VIDEO EDITING ROUTES =====
 
 /**
@@ -100,6 +150,39 @@ router.post('/videos/upload', upload.single('video'), async (req, res) => {
     ]);
     
     broadcast({ type: 'video_uploaded', video: result.rows[0] });
+    
+    // Spawn Video Editor agent to process this video
+    try {
+      const videoId = result.rows[0].id;
+      const videoPath = result.rows[0].file_path;
+      const originalFilename = result.rows[0].original_filename;
+      const instructions = editing_instructions || 'Standard edit: Remove silences, normalize audio, export for YouTube';
+      
+      const spawnResponse = await fetch('http://localhost:3002/api/agents/9/spawn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task: `Edit video: ${originalFilename}\n\nVideo ID: ${videoId}\nVideo Path: ${videoPath}\n\nEditing Instructions:\n${instructions}\n\nWorkflow:\n1. Download video from dashboard\n2. Import to DaVinci Resolve on MSI S1\n3. Apply editing instructions\n4. Render final video\n5. Upload edited video back to dashboard\n6. Mark status as complete`,
+          mode: 'session',
+          cleanup: 'keep'
+        })
+      });
+      
+      if (spawnResponse.ok) {
+        const spawnData: any = await spawnResponse.json();
+        console.log(`✅ Video Editor agent spawned for video ${videoId}:`, spawnData.sessionKey);
+        
+        // Update video with assigned agent info
+        await db.query(`
+          UPDATE video_uploads 
+          SET status = 'in_progress', assigned_to = $1
+          WHERE id = $2
+        `, ['Video Editor Agent', videoId]);
+      }
+    } catch (spawnError: any) {
+      console.error('Failed to spawn Video Editor agent:', spawnError);
+      // Don't fail the upload if agent spawn fails - can be manually triggered
+    }
     
     res.json({ success: true, video: result.rows[0] });
   } catch (error: any) {

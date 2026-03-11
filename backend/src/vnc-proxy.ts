@@ -85,7 +85,8 @@ export function setupVNCProxy(httpServer: HTTPServer) {
       // Forward data from browser to VNC server
       ws.on('message', (data) => {
         if (vncSocket.writable) {
-          vncSocket.write(data);
+          const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
+          vncSocket.write(buffer);
         }
       });
 

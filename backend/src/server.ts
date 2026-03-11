@@ -169,5 +169,20 @@ async function startServer() {
   }
 }
 
+// Global error handlers to catch silent crashes
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('❌ UNHANDLED REJECTION - Server will crash if not handled!');
+  console.error('Reason:', reason);
+  console.error('Promise:', promise);
+  console.error('Stack:', reason?.stack);
+});
+
+process.on('uncaughtException', (error: Error) => {
+  console.error('❌ UNCAUGHT EXCEPTION - Server will crash!');
+  console.error('Error:', error);
+  console.error('Stack:', error.stack);
+  // Don't exit immediately - let PM2 handle restart
+});
+
 // Start the server
 startServer();
