@@ -20,6 +20,8 @@ function VideoSection() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState<string>('all');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editingInstructions, setEditingInstructions] = useState<string>('');
 
   useEffect(() => {
     loadVideos();
@@ -38,20 +40,34 @@ function VideoSection() {
     }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
 
-    const file = e.target.files[0];
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      alert('Please select a video file first.');
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('video', file);
+    formData.append('video', selectedFile);
     formData.append('upload_type', 'video');
+    formData.append('editing_instructions', editingInstructions);
 
     try {
       setUploading(true);
       await axios.post('/api/social-media/videos/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
+      // Reset form
+      setSelectedFile(null);
+      setEditingInstructions('');
       loadVideos(); // Refresh list
+      alert('Video uploaded successfully! The editing agent will start working on it shortly.');
     } catch (error) {
       console.error('Upload failed:', error);
       alert('Upload failed. Please try again.');
@@ -115,22 +131,104 @@ function VideoSection() {
       {/* Upload Section */}
       <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Video for Editing</h2>
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-rlt-blue transition-colors">
-          <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-          <label className="cursor-pointer">
-            <span className="text-sm text-gray-600">
-              {uploading ? 'Uploading...' : 'Click to upload or drag and drop'}
-            </span>
-            <input
-              type="file"
-              className="hidden"
-              accept="video/*"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
+        
+        {/* File Selection */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Video File
           </label>
-          <p className="text-xs text-gray-500 mt-2">MP4, MOV, AVI up to 2GB</p>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-rlt-blue transition-colors">
+            <Upload className="mx-auto mb-3 text-gray-400" size={40} />
+            <label className="cursor-pointer">
+              <span className="text-sm text-gray-600 font-medium">
+                {selectedFile ? selectedFile.name : 'Click to select video'}
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                accept="video/*"
+                onChange={handleFileSelect}
+                disabled={uploading}
+              />
+            </label>
+            <p className="text-xs text-gray-500 mt-2">MP4, MOV, AVI up to 2GB</p>
+          </div>
         </div>
+
+        {/* Editing Instructions */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Editing Instructions
+          </label>
+          <textarea
+            value={editingInstructions}
+            onChange={(e) => setEditingInstructions(e.target.value)}
+            placeholder="Example: Remove all silences, add B-roll every 30 seconds, normalize audio to -14 LUFS, color correct, export for YouTube long-form"
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue focus:border-transparent"
+            disabled={uploading}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Describe what type of edit you need. Be specific about cuts, audio, B-roll, style, etc.
+          </p>
+        </div>
+
+        {/* Quick Presets */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Quick Presets
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setEditingInstructions('Standard YouTube long-form edit: Remove filler words and silences, add B-roll every 20-30 seconds, normalize audio to -14 LUFS, color correction, export 1080p H.264')}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              disabled={uploading}
+            >
+              YouTube Long-Form
+            </button>
+            <button
+              onClick={() => setEditingInstructions('YouTube Shorts: Vertical 9:16 format, 30-60 seconds, captions on, tight cuts, no dead air, background music, export 1080x1920')}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              disabled={uploading}
+            >
+              YouTube Shorts
+            </button>
+            <button
+              onClick={() => setEditingInstructions('Proof/Recap video: Show P&L clearly, include trading disclaimer, explain each trade, honest tone, export with end screen space')}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              disabled={uploading}
+            >
+              Proof/Recap
+            </button>
+            <button
+              onClick={() => setEditingInstructions('Tutorial/Educational: Clear structure with intro/main points/recap, on-screen text for key points, B-roll for concepts, professional pacing')}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              disabled={uploading}
+            >
+              Tutorial
+            </button>
+          </div>
+        </div>
+
+        {/* Upload Button */}
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile || uploading}
+          className={`w-full py-3 rounded-md font-medium transition-colors ${
+            !selectedFile || uploading
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-rlt-blue text-white hover:bg-blue-700'
+          }`}
+        >
+          {uploading ? (
+            <span className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              Uploading...
+            </span>
+          ) : (
+            'Upload & Start Editing'
+          )}
+        </button>
       </div>
 
       {/* Pending/In Progress Videos */}

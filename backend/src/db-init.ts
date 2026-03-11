@@ -40,6 +40,12 @@ export async function initializeDatabase(pool: Pool) {
     await pool.query(viralSchema);
     console.log('✅ Viral content schema initialized');
 
+    // Read and execute cost tracking schema
+    const costSchemaPath = path.join(__dirname, '../../database/cost-tracking-schema.sql');
+    const costSchema = fs.readFileSync(costSchemaPath, 'utf8');
+    await pool.query(costSchema);
+    console.log('✅ Cost tracking schema initialized');
+
     console.log('🎉 Database initialization complete!');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

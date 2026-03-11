@@ -5,6 +5,7 @@ import ProjectCard from '../components/ProjectCard';
 import StatsCard from '../components/StatsCard';
 import BlockerCard from '../components/BlockerCard';
 import WaitingOnTony from '../components/WaitingOnTony';
+import CostSummary from '../components/CostSummary';
 import Modal from '../components/Modal';
 import ProjectForm from '../components/ProjectForm';
 import { FolderKanban, CheckCircle2, AlertCircle, Bell, Plus } from 'lucide-react';
@@ -91,6 +92,9 @@ function Dashboard() {
           />
         </div>
       )}
+
+      {/* Cost Summary */}
+      <CostSummary />
 
       {/* Waiting on Tony Section */}
       <WaitingOnTony />
