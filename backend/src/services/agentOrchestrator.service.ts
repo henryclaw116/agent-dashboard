@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { PipelineTrackerService } from './pipelineTracker.service';
 
 const execAsync = promisify(exec);
 
