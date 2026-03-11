@@ -161,7 +161,7 @@ function AgentForm({ agent, onSuccess, onCancel }: AgentFormProps) {
           </label>
           <select
             value={formData.preferred_runtime}
-            onChange={(e) => setFormData({ ...formData, preferred_runtime: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, preferred_runtime: e.target.value as 'msi' | 'beelink' })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rlt-blue"
           >
             <option value="msi">MSI (Primary Gateway)</option>

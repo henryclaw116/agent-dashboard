@@ -291,7 +291,8 @@ function Financials() {
                 tooltip: {
                   callbacks: {
                     label: (context) => {
-                      return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                      const value = context.parsed.y;
+                      return `${context.dataset.label}: ${value !== null ? formatCurrency(value) : 'N/A'}`;
                     }
                   }
                 }
@@ -319,7 +320,10 @@ function Financials() {
                   legend: { display: false },
                   tooltip: {
                     callbacks: {
-                      label: (context) => formatCurrency(context.parsed.y)
+                      label: (context) => {
+                        const value = context.parsed.y;
+                        return value !== null ? formatCurrency(value) : 'N/A';
+                      }
                     }
                   }
                 },
@@ -346,7 +350,10 @@ function Financials() {
                 legend: { display: false },
                 tooltip: {
                   callbacks: {
-                    label: (context) => formatCurrency(context.parsed.y)
+                    label: (context) => {
+                      const value = context.parsed.y;
+                      return value !== null ? formatCurrency(value) : 'N/A';
+                    }
                   }
                 }
               },
