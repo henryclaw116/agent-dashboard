@@ -20,6 +20,9 @@ interface Agent {
   memory_usage_mb?: number;
   pending_tasks_count: number;
   unread_alerts_count: number;
+  model?: string;
+  console_id?: number;
+  role?: string;
 }
 
 interface AgentOrgChartProps {
@@ -366,10 +369,19 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
       
       if (!fromAgent || !toAgent) return null;
 
-      const x1 = fromAgent.position_x + 120; // Center of card
-      const y1 = fromAgent.position_y + 80;  // Bottom
-      const x2 = toAgent.position_x + 120;
-      const y2 = toAgent.position_y;         // Top
+      // Get actual positions (including any drag updates)
+      const fromPos = draggingAgent === fromAgent.id && dragPosition
+        ? dragPosition
+        : { x: fromAgent.position_x, y: fromAgent.position_y };
+      
+      const toPos = draggingAgent === toAgent.id && dragPosition
+        ? dragPosition
+        : { x: toAgent.position_x, y: toAgent.position_y };
+
+      const x1 = fromPos.x + 120; // Center of card (width 240px / 2)
+      const y1 = fromPos.y + 80;  // Bottom of card
+      const x2 = toPos.x + 120;   // Center of card
+      const y2 = toPos.y;         // Top of card
 
       // Arrow marker style
       const markerId = `arrow-${rel.id}`;
@@ -639,6 +651,13 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                     </div>
                     {agent.description && (
                       <p className="text-xs text-gray-600 line-clamp-1">{agent.description}</p>
+                    )}
+                    {agent.model && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                          {agent.model.split('/')[1] || agent.model}
+                        </span>
+                      </div>
                     )}
                   </div>
                   {agent.unread_alerts_count > 0 && (
