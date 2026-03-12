@@ -181,5 +181,95 @@ export function createSocialPipelineRouter(pool: Pool): Router {
     }
   });
 
+  // Get Bitly analytics summary
+  router.get('/analytics/summary', async (req: Request, res: Response) => {
+    try {
+      // Overall stats
+      const stats = await pool.query(`
+        SELECT 
+          COUNT(*) as total_leads,
+          COUNT(CASE WHEN sent_at IS NOT NULL THEN 1 END) as sent_leads,
+          COALESCE(SUM(bitly_clicks), 0) as total_clicks,
+          COUNT(CASE WHEN bitly_clicks > 0 THEN 1 END) as leads_with_clicks,
+          COALESCE(ROUND(AVG(bitly_clicks), 2), 0) as avg_clicks_per_lead
+        FROM social_leads
+        WHERE approved_at IS NOT NULL
+      `);
+      
+      // By platform
+      const byPlatform = await pool.query(`
+        SELECT 
+          platform,
+          COUNT(*) as leads,
+          COALESCE(SUM(bitly_clicks), 0) as clicks,
+          COALESCE(ROUND(AVG(bitly_clicks), 2), 0) as avg_clicks
+        FROM social_leads
+        WHERE approved_at IS NOT NULL AND sent_at IS NOT NULL
+        GROUP BY platform
+        ORDER BY clicks DESC
+      `);
+      
+      // By pain category
+      const byPain = await pool.query(`
+        SELECT 
+          stage2_pain_category as category,
+          COUNT(*) as leads,
+          COALESCE(SUM(bitly_clicks), 0) as clicks,
+          COALESCE(ROUND(AVG(bitly_clicks), 2), 0) as avg_clicks
+        FROM social_leads
+        WHERE approved_at IS NOT NULL AND sent_at IS NOT NULL
+        GROUP BY stage2_pain_category
+        ORDER BY clicks DESC
+      `);
+      
+      // Top performing leads
+      const topLeads = await pool.query(`
+        SELECT 
+          id,
+          platform,
+          username,
+          stage2_score,
+          stage2_pain_category,
+          stage3_landing_url,
+          bitly_clicks,
+          sent_at
+        FROM social_leads
+        WHERE bitly_clicks > 0
+        ORDER BY bitly_clicks DESC
+        LIMIT 10
+      `);
+      
+      res.json({
+        summary: stats.rows[0],
+        by_platform: byPlatform.rows,
+        by_pain_category: byPain.rows,
+        top_performers: topLeads.rows
+      });
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      res.status(500).json({ error: 'Failed to fetch analytics' });
+    }
+  });
+
+  // Sync Bitly clicks (manual trigger)
+  router.post('/analytics/sync-clicks', async (req: Request, res: Response) => {
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      // Run bitly-analytics.js to sync clicks
+      const { stdout } = await execAsync(
+        'node bitly-analytics.js',
+        { cwd: 'C:\\Users\\reall\\.openclaw\\workspace\\social-pipeline\\msi-pipeline' }
+      );
+      
+      res.json({ success: true, message: 'Click sync started', output: stdout });
+    } catch (error) {
+      console.error('Error syncing clicks:', error);
+      res.status(500).json({ error: 'Failed to sync clicks' });
+    }
+  });
+
   return router;
 }
