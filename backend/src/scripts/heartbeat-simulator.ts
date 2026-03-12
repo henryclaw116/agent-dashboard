@@ -52,9 +52,9 @@ async function simulateHeartbeats() {
     await db.query('SELECT NOW()');
     console.log('✅ Connected\n');
 
-    // Get all agents
-    const result = await db.query('SELECT id, name, status FROM agents ORDER BY id');
-    const agents: Agent[] = result.rows;
+    // Get all agents (initial fetch)
+    let result = await db.query('SELECT id, name, status FROM agents ORDER BY id');
+    let agents: Agent[] = result.rows;
 
     console.log(`📊 Simulating heartbeats for ${agents.length} agents\n`);
 
@@ -70,6 +70,11 @@ async function simulateHeartbeats() {
     // Send heartbeats every 30 seconds
     setInterval(async () => {
       console.log(`\n⏰ Sending heartbeats - ${new Date().toLocaleTimeString()}`);
+      
+      // Refetch agents to get current status from database
+      const result = await db.query('SELECT id, name, status FROM agents ORDER BY id');
+      const agents: Agent[] = result.rows;
+      
       for (const agent of agents) {
         await sendHeartbeat(agent);
       }
