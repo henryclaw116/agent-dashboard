@@ -442,7 +442,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             strokeDasharray={strokeDasharray}
             markerEnd={`url(#${markerId})`}
             opacity="0.7"
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
             onClick={(e) => {
               e.stopPropagation();
               handleRelationshipClick(rel);
@@ -456,7 +456,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             y2={y2}
             stroke="transparent"
             strokeWidth="20"
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
             onClick={(e) => {
               e.stopPropagation();
               handleRelationshipClick(rel);
@@ -506,6 +506,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             strokeWidth="1"
             strokeDasharray="3,3"
             opacity="0.3"
+            style={{ pointerEvents: 'none' }}
           />
         );
       });
@@ -615,7 +616,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
         onMouseLeave={handleMouseUp}
       >
         <svg
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0"
           style={{ 
             transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, 
             transformOrigin: '0 0',
