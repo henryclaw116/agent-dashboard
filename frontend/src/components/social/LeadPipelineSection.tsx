@@ -31,6 +31,7 @@ function LeadPipelineSection() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStage, setSelectedStage] = useState<string>('all');
+  const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
 
   useEffect(() => {
     loadLeads();
@@ -211,7 +212,10 @@ function LeadPipelineSection() {
                         Approve
                       </button>
                     )}
-                    <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200">
+                    <button 
+                      onClick={() => setSelectedLead(lead)}
+                      className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"
+                    >
                       Details
                     </button>
                   </div>
@@ -252,6 +256,129 @@ function LeadPipelineSection() {
           })}
         </div>
       </div>
+
+      {/* Lead Details Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+              <h2 className="text-xl font-bold text-gray-900">Lead Details</h2>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Platform & User */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Source</h3>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded font-medium">
+                    {selectedLead.platform}
+                  </span>
+                  <span className="font-medium text-gray-900">{selectedLead.user}</span>
+                  <span className="text-sm text-gray-500">{formatTime(selectedLead.created_at)}</span>
+                </div>
+              </div>
+
+              {/* Original Content */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Original Post</h3>
+                <p className="text-gray-800 bg-gray-50 p-4 rounded border border-gray-200">
+                  {selectedLead.content}
+                </p>
+              </div>
+
+              {/* Stage Data */}
+              {selectedLead.score && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Score</h3>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={16} className="text-purple-600" />
+                    <span className="text-2xl font-bold text-gray-900">{selectedLead.score}</span>
+                    <span className="text-sm text-gray-600">/ 100</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedLead.pain_type && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Pain Category</h3>
+                  <span className="px-3 py-1 bg-red-100 text-red-700 rounded font-medium">
+                    {selectedLead.pain_type}
+                  </span>
+                </div>
+              )}
+
+              {selectedLead.landing_page && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Assigned Landing Page</h3>
+                  <a
+                    href={selectedLead.landing_page}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {selectedLead.landing_page}
+                  </a>
+                </div>
+              )}
+
+              {selectedLead.reply_draft && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Draft Reply</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                    <p className="text-blue-900">{selectedLead.reply_draft}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedLead.bitly_link && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Tracking Link</h3>
+                  <a
+                    href={selectedLead.bitly_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 hover:underline"
+                  >
+                    <LinkIcon size={16} />
+                    {selectedLead.bitly_link}
+                  </a>
+                </div>
+              )}
+
+              {/* Status */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Current Stage</h3>
+                <span className={`px-3 py-1 rounded font-medium bg-${getStageColor(selectedLead.current_stage)}-100 text-${getStageColor(selectedLead.current_stage)}-700`}>
+                  {STAGES.find(s => s.id === selectedLead.current_stage)?.name || selectedLead.current_stage}
+                </span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+              {selectedLead.status === 'ready' && (
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                  Approve & Send
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
