@@ -36,7 +36,7 @@ function LeadPipelineSection() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStage, setSelectedStage] = useState<string>('all');
-  const [selectedLead, setselectedLead] = useState<PipelineLead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
   const [editedReply, setEditedReply] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,7 +71,8 @@ function LeadPipelineSection() {
     }
   };
 
-  const getStageColor = (stage: string) => {
+  const getStageColor = (stage: string | undefined) => {
+    if (!stage) return 'gray';
     const stageObj = STAGES.find(s => s.id === stage);
     return stageObj?.color || 'gray';
   };
@@ -93,7 +94,7 @@ function LeadPipelineSection() {
         reviewed_by: 'Tony'
       });
       alert('Lead approved! Ready to send.');
-      setselectedLead(null);
+      setSelectedLead(null);
       loadLeads();
     } catch (error) {
       console.error('Failed to approve lead:', error);
@@ -114,7 +115,7 @@ function LeadPipelineSection() {
         reason: 'Rejected by Tony'
       });
       alert('Lead rejected and archived.');
-      setselectedLead(null);
+      setSelectedLead(null);
       loadLeads();
     } catch (error) {
       console.error('Failed to reject lead:', error);
@@ -132,7 +133,7 @@ function LeadPipelineSection() {
       await api.patch(`/social-leads/${selectedLead.id}`, {
         draft_response: editedReply
       });
-      setselectedLead({ ...selectedLead, stage4_reply_text: editedReply });
+      setSelectedLead({ ...selectedLead, stage4_reply_text: editedReply });
       setIsEditing(false);
       alert('Reply updated!');
     } catch (error) {
@@ -144,7 +145,7 @@ function LeadPipelineSection() {
   };
 
   const openLeadDetails = (lead: PipelineLead) => {
-    setselectedLead(lead);
+    setSelectedLead(lead);
     setEditedReply(lead.stage4_reply_text || '');
     setIsEditing(false);
   };
@@ -339,7 +340,7 @@ function LeadPipelineSection() {
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="text-xl font-bold text-gray-900">Lead Details</h2>
               <button
-                onClick={() => setselectedLead(null)}
+                onClick={() => setSelectedLead(null)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 ✕
