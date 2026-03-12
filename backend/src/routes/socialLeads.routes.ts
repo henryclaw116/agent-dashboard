@@ -59,7 +59,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const {
-      status,        // Filter by response_status
+      stage,         // Filter by pipeline stage
       min_score,     // Minimum lead_score
       platform,      // Filter by platform
       limit = 50,    // Results per page
@@ -70,14 +70,32 @@ router.get('/', async (req: Request, res: Response) => {
     const params: any[] = [];
     let paramIndex = 1;
 
-    if (status) {
-      query += ` AND response_status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
+    // Stage filtering
+    if (stage && stage !== 'all') {
+      switch (stage) {
+        case 'scanner':
+          query += ` AND stage1_filter_result = 'KEEP'`;
+          break;
+        case 'scorer':
+          query += ` AND stage2_score IS NOT NULL`;
+          break;
+        case 'router':
+          query += ` AND stage3_landing_page IS NOT NULL`;
+          break;
+        case 'writer':
+          query += ` AND stage4_reply_text IS NOT NULL`;
+          break;
+        case 'dedup':
+          query += ` AND stage5_final_status = 'APPROVED'`;
+          break;
+        case 'tracker':
+          query += ` AND (stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true)`;
+          break;
+      }
     }
 
     if (min_score) {
-      query += ` AND lead_score >= $${paramIndex}`;
+      query += ` AND stage2_score >= $${paramIndex}`;
       params.push(Number(min_score));
       paramIndex++;
     }
@@ -88,40 +106,59 @@ router.get('/', async (req: Request, res: Response) => {
       paramIndex++;
     }
 
-    query += ` ORDER BY lead_score DESC, discovered_at DESC`;
+    query += ` ORDER BY stage2_score DESC, scanned_at DESC`;
     query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(Number(limit), Number(offset));
 
     const result = await pool.query(query, params);
 
-    // Get total count for pagination
+    // Get stats for the current filter
     let countQuery = 'SELECT COUNT(*) FROM social_leads WHERE 1=1';
     const countParams: any[] = [];
-    let countParamIndex = 1;
 
-    if (status) {
-      countQuery += ` AND response_status = $${countParamIndex}`;
-      countParams.push(status);
-      countParamIndex++;
-    }
-
-    if (min_score) {
-      countQuery += ` AND lead_score >= $${countParamIndex}`;
-      countParams.push(Number(min_score));
-      countParamIndex++;
-    }
-
-    if (platform) {
-      countQuery += ` AND platform = $${countParamIndex}`;
-      countParams.push(platform);
+    // Apply same stage filter for count
+    if (stage && stage !== 'all') {
+      switch (stage) {
+        case 'scanner':
+          countQuery += ` AND stage1_filter_result = 'KEEP'`;
+          break;
+        case 'scorer':
+          countQuery += ` AND stage2_score IS NOT NULL`;
+          break;
+        case 'router':
+          countQuery += ` AND stage3_landing_page IS NOT NULL`;
+          break;
+        case 'writer':
+          countQuery += ` AND stage4_reply_text IS NOT NULL`;
+          break;
+        case 'dedup':
+          countQuery += ` AND stage5_final_status = 'APPROVED'`;
+          break;
+        case 'tracker':
+          countQuery += ` AND (stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true)`;
+          break;
+      }
     }
 
     const countResult = await pool.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].count);
 
+    // Get stage counts for stats
+    const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE stage1_filter_result = 'KEEP') as scanner,
+        COUNT(*) FILTER (WHERE stage2_score IS NOT NULL) as scorer,
+        COUNT(*) FILTER (WHERE stage3_landing_page IS NOT NULL) as router,
+        COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
+        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED') as dedup,
+        COUNT(*) FILTER (WHERE stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true) as tracker
+      FROM social_leads
+    `);
+
     res.json({
       success: true,
       leads: result.rows,
+      stats: statsResult.rows[0],
       pagination: {
         total,
         limit: Number(limit),
@@ -138,22 +175,36 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/social-leads/stats - Get summary statistics
 router.get('/stats', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(`
+    // Get stage counts
+    const stageResult = await pool.query(`
       SELECT
-        COUNT(*) as total_leads,
-        COUNT(*) FILTER (WHERE response_status = 'pending') as pending,
-        COUNT(*) FILTER (WHERE response_status = 'approved') as approved,
-        COUNT(*) FILTER (WHERE response_status = 'sent') as sent,
-        COUNT(*) FILTER (WHERE response_status = 'archived') as archived,
-        COUNT(*) FILTER (WHERE lead_score >= 80) as high_priority,
-        COUNT(*) FILTER (WHERE lead_score >= 60 AND lead_score < 80) as medium_priority,
-        COUNT(*) FILTER (WHERE converted_to_trial = true) as converted,
-        ROUND(AVG(lead_score)) as avg_score,
+        COUNT(*) FILTER (WHERE stage1_filter_result = 'KEEP') as scanner,
+        COUNT(*) FILTER (WHERE stage2_score IS NOT NULL) as scorer,
+        COUNT(*) FILTER (WHERE stage3_landing_page IS NOT NULL) as router,
+        COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
+        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED') as dedup,
+        COUNT(*) FILTER (WHERE stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true) as tracker,
+        COUNT(*) as total
+      FROM social_leads
+    `);
+
+    // Get additional stats
+    const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED' AND approved_at IS NULL) as awaiting_approval,
+        COUNT(*) FILTER (WHERE sent_at IS NOT NULL) as sent,
+        ROUND(AVG(stage2_score)) as avg_score,
         COUNT(DISTINCT platform) as platforms_monitored
       FROM social_leads
     `);
 
-    res.json({ success: true, stats: result.rows[0] });
+    res.json({ 
+      success: true, 
+      stats: {
+        ...stageResult.rows[0],
+        ...statsResult.rows[0]
+      }
+    });
   } catch (error: any) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
