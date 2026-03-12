@@ -1009,10 +1009,29 @@ router.get('/stats', async (req, res) => {
     res.json({
       success: true,
       stats: {
-        agents: agents.rows[0],
-        tasks: tasks.rows[0],
-        alerts: alerts.rows[0],
-        heartbeats: heartbeats.rows[0]
+        agents: {
+          total: parseInt(agents.rows[0].total) || 0,
+          active: parseInt(agents.rows[0].active) || 0,
+          offline: parseInt(agents.rows[0].offline) || 0,
+          paused: parseInt(agents.rows[0].paused) || 0
+        },
+        tasks: {
+          total: parseInt(tasks.rows[0].total) || 0,
+          pending: parseInt(tasks.rows[0].pending) || 0,
+          in_progress: parseInt(tasks.rows[0].in_progress) || 0,
+          completed: parseInt(tasks.rows[0].completed) || 0,
+          failed: parseInt(tasks.rows[0].failed) || 0
+        },
+        alerts: {
+          total: parseInt(alerts.rows[0].total) || 0,
+          new: parseInt(alerts.rows[0].new) || 0,
+          critical: parseInt(alerts.rows[0].critical) || 0
+        },
+        heartbeats: {
+          agents_reporting: parseInt(heartbeats.rows[0].agents_reporting) || 0,
+          avg_cpu: heartbeats.rows[0].avg_cpu ? parseFloat(heartbeats.rows[0].avg_cpu) : null,
+          avg_memory: heartbeats.rows[0].avg_memory ? parseFloat(heartbeats.rows[0].avg_memory) : null
+        }
       }
     });
   } catch (error: any) {
