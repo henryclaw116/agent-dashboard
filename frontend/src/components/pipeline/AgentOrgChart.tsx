@@ -592,7 +592,13 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
       >
         <svg
           className="absolute inset-0 pointer-events-none"
-          style={{ transform: `scale(${zoom})`, transformOrigin: '0 0' }}
+          style={{ 
+            transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`, 
+            transformOrigin: '0 0',
+            overflow: 'visible'
+          }}
+          width="100%"
+          height="100%"
         >
           {renderHierarchyLines()}
           {renderRelationshipLines()}
