@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Upload, Video, Image, CheckCircle, XCircle, Clock, TrendingUp, Calendar } from 'lucide-react';
+import { Upload, Video, Image, CheckCircle, XCircle, Clock, TrendingUp, Calendar, Users } from 'lucide-react';
 import VideoSection from '../components/social/VideoSection';
 import ContentSection from '../components/social/ContentSection';
 import ViralIdeasSection from '../components/social/ViralIdeasSection';
 import ScheduleSection from '../components/social/ScheduleSection';
+import LeadPipelineSection from '../components/social/LeadPipelineSection';
 
 function SocialMedia() {
-  const [activeTab, setActiveTab] = useState<'videos' | 'content' | 'viral' | 'schedule'>('videos');
+  const [activeTab, setActiveTab] = useState<'leads' | 'videos' | 'content' | 'viral' | 'schedule'>('leads');
 
   const tabs = [
+    { id: 'leads', label: 'Lead Pipeline', icon: Users },
     { id: 'videos', label: 'Video Editing', icon: Video },
     { id: 'content', label: 'Social Content', icon: Image },
     { id: 'viral', label: 'Viral Ideas', icon: TrendingUp },
@@ -31,7 +33,7 @@ function SocialMedia() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'videos' | 'content' | 'viral' | 'schedule')}
+                onClick={() => setActiveTab(tab.id as 'leads' | 'videos' | 'content' | 'viral' | 'schedule')}
                 className={`
                   flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
                   ${isActive
@@ -49,6 +51,7 @@ function SocialMedia() {
       </div>
 
       {/* Content */}
+      {activeTab === 'leads' && <LeadPipelineSection />}
       {activeTab === 'videos' && <VideoSection />}
       {activeTab === 'content' && <ContentSection />}
       {activeTab === 'viral' && <ViralIdeasSection />}
