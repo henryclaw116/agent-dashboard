@@ -74,22 +74,22 @@ router.get('/', async (req: Request, res: Response) => {
     if (stage && stage !== 'all') {
       switch (stage) {
         case 'scanner':
-          query += ` AND stage1_filter_result = 'KEEP'`;
+          query += ` AND stage1_status = 'KEEP'`;
           break;
         case 'scorer':
           query += ` AND stage2_score IS NOT NULL`;
           break;
         case 'router':
-          query += ` AND stage3_landing_page IS NOT NULL`;
+          query += ` AND stage3_landing_url IS NOT NULL`;
           break;
         case 'writer':
           query += ` AND stage4_reply_text IS NOT NULL`;
           break;
         case 'dedup':
-          query += ` AND stage5_final_status = 'APPROVED'`;
+          query += ` AND stage5_status IS NOT NULL`;
           break;
         case 'tracker':
-          query += ` AND (stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true)`;
+          query += ` AND stage6_short_link IS NOT NULL`;
           break;
       }
     }
@@ -120,22 +120,22 @@ router.get('/', async (req: Request, res: Response) => {
     if (stage && stage !== 'all') {
       switch (stage) {
         case 'scanner':
-          countQuery += ` AND stage1_filter_result = 'KEEP'`;
+          countQuery += ` AND stage1_status = 'KEEP'`;
           break;
         case 'scorer':
           countQuery += ` AND stage2_score IS NOT NULL`;
           break;
         case 'router':
-          countQuery += ` AND stage3_landing_page IS NOT NULL`;
+          countQuery += ` AND stage3_landing_url IS NOT NULL`;
           break;
         case 'writer':
           countQuery += ` AND stage4_reply_text IS NOT NULL`;
           break;
         case 'dedup':
-          countQuery += ` AND stage5_final_status = 'APPROVED'`;
+          countQuery += ` AND stage5_status IS NOT NULL`;
           break;
         case 'tracker':
-          countQuery += ` AND (stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true)`;
+          countQuery += ` AND stage6_short_link IS NOT NULL`;
           break;
       }
     }
@@ -146,12 +146,12 @@ router.get('/', async (req: Request, res: Response) => {
     // Get stage counts for stats
     const statsResult = await pool.query(`
       SELECT
-        COUNT(*) FILTER (WHERE stage1_filter_result = 'KEEP') as scanner,
+        COUNT(*) FILTER (WHERE stage1_status = 'KEEP') as scanner,
         COUNT(*) FILTER (WHERE stage2_score IS NOT NULL) as scorer,
-        COUNT(*) FILTER (WHERE stage3_landing_page IS NOT NULL) as router,
+        COUNT(*) FILTER (WHERE stage3_landing_url IS NOT NULL) as router,
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
-        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED') as dedup,
-        COUNT(*) FILTER (WHERE stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true) as tracker
+        COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
+        COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker
       FROM social_leads
     `);
 
@@ -178,12 +178,12 @@ router.get('/stats', async (req: Request, res: Response) => {
     // Get stage counts
     const stageResult = await pool.query(`
       SELECT
-        COUNT(*) FILTER (WHERE stage1_filter_result = 'KEEP') as scanner,
+        COUNT(*) FILTER (WHERE stage1_status = 'KEEP') as scanner,
         COUNT(*) FILTER (WHERE stage2_score IS NOT NULL) as scorer,
-        COUNT(*) FILTER (WHERE stage3_landing_page IS NOT NULL) as router,
+        COUNT(*) FILTER (WHERE stage3_landing_url IS NOT NULL) as router,
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
-        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED') as dedup,
-        COUNT(*) FILTER (WHERE stage6_bitly_link IS NOT NULL OR stage6_ready_for_dashboard = true) as tracker,
+        COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
+        COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
         COUNT(*) as total
       FROM social_leads
     `);
@@ -191,7 +191,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     // Get additional stats
     const statsResult = await pool.query(`
       SELECT
-        COUNT(*) FILTER (WHERE stage5_final_status = 'APPROVED' AND approved_at IS NULL) as awaiting_approval,
+        COUNT(*) FILTER (WHERE status = 'PENDING') as awaiting_approval,
         COUNT(*) FILTER (WHERE sent_at IS NOT NULL) as sent,
         ROUND(AVG(stage2_score)) as avg_score,
         COUNT(DISTINCT platform) as platforms_monitored
