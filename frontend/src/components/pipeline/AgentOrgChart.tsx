@@ -32,6 +32,8 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Auto-layout agents if not positioned
@@ -85,20 +87,39 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
     });
   };
 
+  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // Only pan if clicking on canvas background (not on an agent)
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.agent-card') === null) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      e.preventDefault();
+    }
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggingAgent === null) return;
+    // Handle agent dragging
+    if (draggingAgent !== null) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+      const x = (e.clientX - rect.left) / zoom - dragOffset.x - pan.x / zoom;
+      const y = (e.clientY - rect.top) / zoom - dragOffset.y - pan.y / zoom;
 
-    const x = (e.clientX - rect.left) / zoom - dragOffset.x;
-    const y = (e.clientY - rect.top) / zoom - dragOffset.y;
-
-    // Update position locally for smooth drag
-    const agent = agents.find(a => a.id === draggingAgent);
-    if (agent) {
-      agent.position_x = x;
-      agent.position_y = y;
+      // Update position locally for smooth drag
+      const agent = agents.find(a => a.id === draggingAgent);
+      if (agent) {
+        agent.position_x = x;
+        agent.position_y = y;
+      }
+    }
+    
+    // Handle canvas panning
+    if (isPanning) {
+      const newPan = {
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      };
+      setPan(newPan);
     }
   };
 
@@ -109,6 +130,10 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
         onPositionUpdate(agent.id, { x: agent.position_x, y: agent.position_y });
       }
       setDraggingAgent(null);
+    }
+    
+    if (isPanning) {
+      setIsPanning(false);
     }
   };
 
@@ -215,7 +240,11 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
       <div
         ref={canvasRef}
         className="relative bg-gray-50 overflow-hidden"
-        style={{ height: '600px', cursor: draggingAgent ? 'grabbing' : 'default' }}
+        style={{ 
+          height: '600px', 
+          cursor: draggingAgent ? 'grabbing' : isPanning ? 'grabbing' : 'grab'
+        }}
+        onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -239,7 +268,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
           {agents.map(agent => (
             <div
               key={agent.id}
-              className={`absolute bg-white rounded-lg shadow-lg border-2 transition-all ${getStatusColor(agent.status)} ${
+              className={`agent-card absolute bg-white rounded-lg shadow-lg border-2 transition-all ${getStatusColor(agent.status)} ${
                 draggingAgent === agent.id ? 'cursor-grabbing shadow-2xl scale-105' : 'cursor-grab hover:shadow-xl'
               }`}
               style={{
