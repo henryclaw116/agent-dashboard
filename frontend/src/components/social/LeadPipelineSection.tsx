@@ -96,21 +96,59 @@ function LeadPipelineSection() {
     return `${Math.floor(seconds / 3600)}h ago`;
   };
 
-  const handleApprove = async () => {
+  const handleCopyToClipboard = async () => {
     if (!selectedLead) return;
     
+    const finalReply = (editedReply || selectedLead.stage4_reply_text || '')
+      .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
+    
     try {
-      setSaving(true);
+      await navigator.clipboard.writeText(finalReply);
+      
+      // Mark as approved but not sent
       await api.post(`/social-leads/${selectedLead.id}/approve`, {
-        approved_response: editedReply || selectedLead.stage4_reply_text,
+        approved_response: finalReply,
         reviewed_by: 'Tony'
       });
-      alert('Lead approved! Ready to send.');
+      
+      alert('✅ Reply copied to clipboard! Paste it manually on the platform.');
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
-      console.error('Failed to approve lead:', error);
-      alert('Failed to approve lead');
+      console.error('Failed to copy reply:', error);
+      alert('Failed to copy reply');
+    }
+  };
+
+  const handleAutoSend = async () => {
+    if (!selectedLead) return;
+    
+    if (!confirm(`Auto-send this reply to ${selectedLead.platform}?\n\nThis will post the reply automatically using the agent.`)) {
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      
+      const finalReply = (editedReply || selectedLead.stage4_reply_text || '')
+        .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
+      
+      // Approve and mark for auto-send
+      await api.post(`/social-leads/${selectedLead.id}/approve`, {
+        approved_response: finalReply,
+        reviewed_by: 'Tony',
+        auto_send: true
+      });
+      
+      // TODO: Trigger actual posting to platform
+      // This would call the social-pipeline agent to post the reply
+      
+      alert('✅ Reply approved for auto-send! The agent will post it shortly.');
+      setSelectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to auto-send:', error);
+      alert('Failed to auto-send reply');
     } finally {
       setSaving(false);
     }
@@ -593,11 +631,17 @@ function LeadPipelineSection() {
                   Close
                 </button>
                 <button
-                  onClick={handleApprove}
-                  disabled={saving}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCopyToClipboard}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
                 >
-                  {saving ? 'Approving...' : 'Approve & Send'}
+                  📋 Copy to Clipboard
+                </button>
+                <button
+                  onClick={handleAutoSend}
+                  disabled={saving}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {saving ? '⏳ Sending...' : '🚀 Auto-Send'}
                 </button>
               </div>
             </div>
