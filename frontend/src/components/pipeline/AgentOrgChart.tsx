@@ -738,6 +738,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                 <div className="flex items-center gap-1 pt-2 border-t border-gray-200">
                   {agent.status === 'active' ? (
                     <button
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); onControlAction(agent.id, 'pause'); }}
                       className="flex-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 flex items-center justify-center gap-1"
                       title="Pause"
@@ -747,6 +748,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                     </button>
                   ) : agent.status === 'paused' ? (
                     <button
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); onControlAction(agent.id, 'start'); }}
                       className="flex-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center justify-center gap-1"
                       title="Resume"
@@ -756,6 +758,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                     </button>
                   ) : (
                     <button
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => { e.stopPropagation(); onControlAction(agent.id, 'start'); }}
                       className="flex-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex items-center justify-center gap-1"
                       title="Start"
@@ -765,6 +768,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                     </button>
                   )}
                   <button
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); onControlAction(agent.id, 'restart'); }}
                     className="flex-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center justify-center gap-1"
                     title="Restart"
@@ -773,6 +777,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                     Restart
                   </button>
                   <button
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); onAgentClick(agent); }}
                     className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                     title="Details"
