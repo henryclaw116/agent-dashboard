@@ -211,14 +211,23 @@ function AgentStats({ agent, onClose, onControlAction, onRefresh }: AgentStatsPr
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h3>
             <div className="space-y-2">
-              <button className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm">
-                View Full Logs
+              <button 
+                onClick={() => window.open(`https://rlt-agent-dashboard.vercel.app/pipeline?tab=logs&agent=${agent.id}`, '_blank')}
+                className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm hover:border-rlt-blue transition-colors"
+              >
+                📋 View Full Logs
               </button>
-              <button className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm">
-                View Task History
+              <button 
+                onClick={() => window.open(`https://rlt-agent-dashboard.vercel.app/pipeline?tab=tasks&agent=${agent.id}`, '_blank')}
+                className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm hover:border-rlt-blue transition-colors"
+              >
+                📊 View Task History
               </button>
-              <button className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm">
-                Configure Schedules
+              <button 
+                onClick={() => alert(`Schedule Configuration\n\nComing soon: Configure automated schedules for ${agent.name}\n\nFor now, you can:\n- Create cron jobs via the API\n- Set interval-based schedules\n- Configure daily/hourly tasks\n\nSee ORCHESTRATION_GUIDE.md for API details.`)}
+                className="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-left text-sm hover:border-rlt-blue transition-colors"
+              >
+                ⚙️ Configure Schedules
               </button>
             </div>
           </div>

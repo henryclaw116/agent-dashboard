@@ -12,7 +12,7 @@ interface RelationshipModalProps {
   fromAgent: Agent;
   toAgent: Agent;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (relationshipId?: number, relationshipData?: any) => void;
 }
 
 const RELATIONSHIP_TYPES = [
@@ -102,7 +102,7 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
       if (priorityFilter) workflowConfig.priority_threshold = { priority: 3 };
       if (tags) workflowConfig.task_filter = { tags: tags.split(',').map(t => t.trim()) };
 
-      await api.post('/relationships', {
+      const relationshipData = {
         from_agent_id: fromAgent.id,
         to_agent_id: toAgent.id,
         relationship_type: relationshipType,
@@ -111,9 +111,11 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
         line_style: lineStyle,
         label: label || selectedType?.label,
         notes
-      });
+      };
 
-      onCreated();
+      const response = await api.post('/relationships', relationshipData);
+      
+      onCreated(response.data.relationship?.id, relationshipData);
       onClose();
     } catch (error: any) {
       console.error('Failed to create relationship:', error);

@@ -43,12 +43,31 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedRelationship, setSelectedRelationship] = useState<any | null>(null);
+  const [undoStack, setUndoStack] = useState<any[]>([]);
+  const [redoStack, setRedoStack] = useState<any[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Load relationships
   useEffect(() => {
     loadRelationships();
   }, []);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack, redoStack]);
 
   const loadRelationships = async () => {
     try {
@@ -70,12 +89,115 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
 
   const deleteRelationship = async (relationshipId: number) => {
     try {
+      // Save state for undo
+      const deletedRel = relationships.find(r => r.id === relationshipId);
+      if (deletedRel) {
+        saveStateForUndo({
+          type: 'delete_relationship',
+          relationship: deletedRel
+        });
+      }
+
       await api.delete(`/relationships/${relationshipId}`);
       await loadRelationships();
       console.log('✓ Relationship deleted');
     } catch (error: any) {
       console.error('Failed to delete relationship:', error);
       alert('Failed to delete relationship: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  // Undo/Redo system
+  const saveStateForUndo = (action: any) => {
+    setUndoStack(prev => [...prev, action]);
+    setRedoStack([]); // Clear redo stack when new action is made
+  };
+
+  const handleUndo = async () => {
+    if (undoStack.length === 0) {
+      alert('Nothing to undo');
+      return;
+    }
+
+    const lastAction = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    setRedoStack(prev => [...prev, lastAction]);
+
+    try {
+      switch (lastAction.type) {
+        case 'move_agent':
+          // Restore previous position
+          await onPositionUpdate(lastAction.agentId, lastAction.oldPosition);
+          break;
+
+        case 'delete_relationship':
+          // Recreate the relationship
+          await api.post('/relationships', {
+            from_agent_id: lastAction.relationship.from_agent_id,
+            to_agent_id: lastAction.relationship.to_agent_id,
+            relationship_type: lastAction.relationship.relationship_type,
+            workflow_config: lastAction.relationship.workflow_config,
+            line_color: lastAction.relationship.line_color,
+            line_style: lastAction.relationship.line_style,
+            label: lastAction.relationship.label
+          });
+          await loadRelationships();
+          break;
+
+        case 'create_relationship':
+          // Delete the relationship
+          await api.delete(`/relationships/${lastAction.relationshipId}`);
+          await loadRelationships();
+          break;
+      }
+      console.log('✓ Undo successful');
+    } catch (error) {
+      console.error('Undo failed:', error);
+      alert('Failed to undo action');
+    }
+  };
+
+  const handleRedo = async () => {
+    if (redoStack.length === 0) {
+      alert('Nothing to redo');
+      return;
+    }
+
+    const action = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+    setUndoStack(prev => [...prev, action]);
+
+    try {
+      switch (action.type) {
+        case 'move_agent':
+          // Restore newer position
+          await onPositionUpdate(action.agentId, action.newPosition);
+          break;
+
+        case 'delete_relationship':
+          // Delete again
+          const rel = await api.get('/relationships');
+          const toDelete = rel.data.relationships.find(
+            (r: any) => r.from_agent_id === action.relationship.from_agent_id &&
+                       r.to_agent_id === action.relationship.to_agent_id &&
+                       r.relationship_type === action.relationship.relationship_type
+          );
+          if (toDelete) {
+            await api.delete(`/relationships/${toDelete.id}`);
+            await loadRelationships();
+          }
+          break;
+
+        case 'create_relationship':
+          // Recreate
+          const response = await api.post('/relationships', action.relationship);
+          await loadRelationships();
+          break;
+      }
+      console.log('✓ Redo successful');
+    } catch (error) {
+      console.error('Redo failed:', error);
+      alert('Failed to redo action');
     }
   };
 
@@ -176,6 +298,18 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
 
   const handleMouseUp = () => {
     if (draggingAgent !== null && dragPosition) {
+      const agent = agents.find(a => a.id === draggingAgent);
+      
+      // Save state for undo
+      if (agent) {
+        saveStateForUndo({
+          type: 'move_agent',
+          agentId: agent.id,
+          oldPosition: { x: agent.position_x, y: agent.position_y },
+          newPosition: dragPosition
+        });
+      }
+
       // Save the final position
       onPositionUpdate(draggingAgent, dragPosition);
       setDraggingAgent(null);
@@ -372,6 +506,24 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
           >
             Auto-Layout
           </button>
+          <div className="flex items-center gap-1 border-l border-gray-300 pl-2">
+            <button
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Undo (Ctrl+Z)"
+            >
+              ↶ Undo
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={redoStack.length === 0}
+              className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Redo (Ctrl+Y)"
+            >
+              ↷ Redo
+            </button>
+          </div>
           <button
             onClick={() => {
               setConnectionMode(!connectionMode);
@@ -610,7 +762,15 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             setConnectingFrom(null);
             setConnectingTo(null);
           }}
-          onCreated={() => {
+          onCreated={(relationshipId?: number, relationshipData?: any) => {
+            // Save for undo
+            if (relationshipId && relationshipData) {
+              saveStateForUndo({
+                type: 'create_relationship',
+                relationshipId,
+                relationship: relationshipData
+              });
+            }
             loadRelationships();
           }}
         />
