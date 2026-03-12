@@ -41,6 +41,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [connectingTo, setConnectingTo] = useState<Agent | null>(null);
   const [relationships, setRelationships] = useState<any[]>([]);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Load relationships
@@ -138,12 +139,8 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
       const x = (e.clientX - rect.left) / zoom - dragOffset.x - pan.x / zoom;
       const y = (e.clientY - rect.top) / zoom - dragOffset.y - pan.y / zoom;
 
-      // Update position locally for smooth drag
-      const agent = agents.find(a => a.id === draggingAgent);
-      if (agent) {
-        agent.position_x = x;
-        agent.position_y = y;
-      }
+      // Update position state for smooth visual drag
+      setDragPosition({ x, y });
     }
     
     // Handle canvas panning
@@ -157,12 +154,11 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   };
 
   const handleMouseUp = () => {
-    if (draggingAgent !== null) {
-      const agent = agents.find(a => a.id === draggingAgent);
-      if (agent) {
-        onPositionUpdate(agent.id, { x: agent.position_x, y: agent.position_y });
-      }
+    if (draggingAgent !== null && dragPosition) {
+      // Save the final position
+      onPositionUpdate(draggingAgent, dragPosition);
       setDraggingAgent(null);
+      setDragPosition(null);
     }
     
     if (isPanning) {
@@ -407,19 +403,30 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             height: '100%'
           }}
         >
-          {agents.map(agent => (
+          {agents.map(agent => {
+            const isDragging = draggingAgent === agent.id;
+            const position = isDragging && dragPosition
+              ? dragPosition
+              : { x: agent.position_x, y: agent.position_y };
+
+            return (
             <div
               key={agent.id}
-              className={`agent-card absolute bg-white rounded-lg shadow-lg border-2 transition-all ${getStatusColor(agent.status)} ${
-                draggingAgent === agent.id ? 'cursor-grabbing shadow-2xl scale-105' : 'cursor-grab hover:shadow-xl'
+              className={`agent-card absolute bg-white rounded-lg shadow-lg border-2 ${getStatusColor(agent.status)} ${
+                isDragging ? 'cursor-grabbing shadow-2xl scale-105 transition-none' : 'cursor-grab hover:shadow-xl transition-all'
               }`}
               style={{
-                left: agent.position_x,
-                top: agent.position_y,
+                left: position.x,
+                top: position.y,
                 width: '240px',
-                zIndex: draggingAgent === agent.id ? 1000 : 1
+                zIndex: isDragging ? 1000 : 1,
+                userSelect: 'none', // Prevent text selection
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none'
               }}
               onMouseDown={(e) => handleMouseDown(e, agent)}
+              onDragStart={(e) => e.preventDefault()} // Prevent default drag
             >
               {/* Agent Card */}
               <div className="p-4">
@@ -525,7 +532,8 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {agents.length === 0 && (
