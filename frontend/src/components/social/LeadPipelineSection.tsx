@@ -40,13 +40,23 @@ function LeadPipelineSection() {
 
   const loadLeads = async () => {
     try {
-      // In real implementation, this would fetch from social pipeline API
-      // For now, showing the structure
+      console.log('Loading leads for stage:', selectedStage);
       const response = await api.get(`/social-leads?stage=${selectedStage}`);
+      console.log('Response:', response.data);
       setLeads(response.data.leads || []);
       setStats(response.data.stats || null);
+      console.log('Stats loaded:', response.data.stats);
     } catch (error) {
       console.error('Failed to load leads:', error);
+      // Set empty stats on error so at least we show zeros
+      setStats({
+        scanner: 0,
+        scorer: 0,
+        router: 0,
+        writer: 0,
+        dedup: 0,
+        tracker: 0
+      });
     } finally {
       setLoading(false);
     }

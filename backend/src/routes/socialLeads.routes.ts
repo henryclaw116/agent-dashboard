@@ -155,10 +155,21 @@ router.get('/', async (req: Request, res: Response) => {
       FROM social_leads
     `);
 
+    // Convert stats to numbers
+    const stats = statsResult.rows[0];
+    const parsedStats = {
+      scanner: parseInt(stats.scanner) || 0,
+      scorer: parseInt(stats.scorer) || 0,
+      router: parseInt(stats.router) || 0,
+      writer: parseInt(stats.writer) || 0,
+      dedup: parseInt(stats.dedup) || 0,
+      tracker: parseInt(stats.tracker) || 0
+    };
+
     res.json({
       success: true,
       leads: result.rows,
-      stats: statsResult.rows[0],
+      stats: parsedStats,
       pagination: {
         total,
         limit: Number(limit),
@@ -198,11 +209,24 @@ router.get('/stats', async (req: Request, res: Response) => {
       FROM social_leads
     `);
 
+    // Parse all stats as integers
+    const stageStats = stageResult.rows[0];
+    const additionalStats = statsResult.rows[0];
+    
     res.json({ 
       success: true, 
       stats: {
-        ...stageResult.rows[0],
-        ...statsResult.rows[0]
+        scanner: parseInt(stageStats.scanner) || 0,
+        scorer: parseInt(stageStats.scorer) || 0,
+        router: parseInt(stageStats.router) || 0,
+        writer: parseInt(stageStats.writer) || 0,
+        dedup: parseInt(stageStats.dedup) || 0,
+        tracker: parseInt(stageStats.tracker) || 0,
+        total: parseInt(stageStats.total) || 0,
+        awaiting_approval: parseInt(additionalStats.awaiting_approval) || 0,
+        sent: parseInt(additionalStats.sent) || 0,
+        avg_score: parseInt(additionalStats.avg_score) || 0,
+        platforms_monitored: parseInt(additionalStats.platforms_monitored) || 0
       }
     });
   } catch (error: any) {
