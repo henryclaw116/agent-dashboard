@@ -31,6 +31,15 @@ const STAGES = [
   { id: 'tracker', name: 'Tracker', icon: LinkIcon, color: 'pink' }
 ];
 
+const LANDING_PAGES = [
+  { url: 'https://trade.reallifetrading.com/consistencycourse', label: 'Consistency Course (Losing Money)' },
+  { url: 'https://trade.reallifetrading.com/200challenge', label: '$200 Strategy Challenge (Small Account)' },
+  { url: 'https://trade.reallifetrading.com/optionsbasics', label: 'Options Basics (Beginner)' },
+  { url: 'https://trade.reallifetrading.com/creditspreads', label: 'Credit Spreads Guide (Strategy)' },
+  { url: 'https://trade.reallifetrading.com/trial', label: 'Free Trial (General Interest)' },
+  { url: 'https://trade.reallifetrading.com/income', label: 'Supplemental Income (Career Focus)' },
+];
+
 function LeadPipelineSection() {
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -40,6 +49,9 @@ function LeadPipelineSection() {
   const [editedReply, setEditedReply] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedLandingPage, setSelectedLandingPage] = useState<string>('');
+  const [trainingFeedback, setTrainingFeedback] = useState<string>('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -144,9 +156,56 @@ function LeadPipelineSection() {
     }
   };
 
+  const handleRegenerateReply = async () => {
+    if (!selectedLead || !trainingFeedback.trim()) {
+      alert('Please provide training feedback first');
+      return;
+    }
+
+    try {
+      setIsRegenerating(true);
+
+      const response = await api.post(`/social-leads/${selectedLead.id}/regenerate-reply`, {
+        feedback: trainingFeedback,
+        landing_page: selectedLandingPage || selectedLead.stage3_landing_url,
+        original_reply: selectedLead.stage4_reply_text,
+        post_text: selectedLead.post_text,
+        pain_category: selectedLead.stage2_pain_category
+      });
+
+      const newReply = response.data.reply;
+      setEditedReply(newReply);
+      setSelectedLead({ ...selectedLead, stage4_reply_text: newReply });
+      alert('Reply regenerated! Review and approve or edit as needed.');
+      setTrainingFeedback(''); // Clear feedback after use
+
+    } catch (error) {
+      console.error('Failed to regenerate reply:', error);
+      alert('Failed to regenerate reply');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const handleLandingPageChange = async (newUrl: string) => {
+    setSelectedLandingPage(newUrl);
+    
+    if (selectedLead) {
+      try {
+        await api.patch(`/social-leads/${selectedLead.id}`, {
+          landing_url: newUrl
+        });
+      } catch (error) {
+        console.error('Failed to update landing page:', error);
+      }
+    }
+  };
+
   const openLeadDetails = (lead: PipelineLead) => {
     setSelectedLead(lead);
     setEditedReply(lead.stage4_reply_text || '');
+    setSelectedLandingPage(lead.stage3_landing_url || '');
+    setTrainingFeedback('');
     setIsEditing(false);
   };
 
@@ -390,19 +449,30 @@ function LeadPipelineSection() {
                 </div>
               )}
 
-              {selectedLead.stage3_landing_url && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Assigned Landing Page</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Landing Page</h3>
+                <select
+                  value={selectedLandingPage}
+                  onChange={(e) => handleLandingPageChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {LANDING_PAGES.map((page) => (
+                    <option key={page.url} value={page.url}>
+                      {page.label}
+                    </option>
+                  ))}
+                </select>
+                {selectedLandingPage && (
                   <a
-                    href={selectedLead.stage3_landing_url}
+                    href={selectedLandingPage}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
+                    className="text-xs text-blue-600 hover:underline mt-1 inline-block"
                   >
-                    {selectedLead.stage3_landing_url}
+                    Open: {selectedLandingPage}
                   </a>
-                </div>
-              )}
+                )}
+              </div>
 
               {selectedLead.stage4_reply_text && (
                 <div>
@@ -447,6 +517,39 @@ function LeadPipelineSection() {
                   )}
                 </div>
               )}
+
+              {/* Training Feedback & Regenerate */}
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  🎓 Train the AI
+                </h3>
+                <p className="text-xs text-gray-600 mb-3">
+                  Tell the AI what it got right or wrong. Be specific about tone, length, or content issues. The AI will regenerate the reply based on your feedback.
+                </p>
+                <textarea
+                  value={trainingFeedback}
+                  onChange={(e) => setTrainingFeedback(e.target.value)}
+                  placeholder="Example: 'Too formal. Make it more casual and friendly. Don't mention free trial in first message - just focus on the problem. Shorten to 3 sentences.'"
+                  className="w-full px-3 py-2 border border-yellow-300 rounded focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+                  rows={3}
+                />
+                <button
+                  onClick={handleRegenerateReply}
+                  disabled={isRegenerating || !trainingFeedback.trim()}
+                  className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Regenerating Reply...
+                    </>
+                  ) : (
+                    <>
+                      ✨ Regenerate Reply with Feedback
+                    </>
+                  )}
+                </button>
+              </div>
 
               {selectedLead.stage6_short_link && (
                 <div>

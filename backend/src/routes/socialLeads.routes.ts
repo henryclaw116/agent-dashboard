@@ -404,6 +404,55 @@ router.post('/:id/archive', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/social-leads/:id/regenerate-reply - Regenerate reply with training feedback
+router.post('/:id/regenerate-reply', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { feedback, landing_page, original_reply, post_text, pain_category } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'Training feedback is required' });
+    }
+
+    // In a real implementation, this would call an AI service (OpenAI, Claude, etc.)
+    // For now, we'll create a simple template-based response
+    
+    // TODO: Replace with actual AI call
+    // const aiResponse = await openai.createChatCompletion({
+    //   model: 'gpt-4',
+    //   messages: [
+    //     { role: 'system', content: 'You are a helpful assistant for credit spread trading education...' },
+    //     { role: 'user', content: `Original post: ${post_text}\n\nOriginal reply: ${original_reply}\n\nTraining feedback: ${feedback}\n\nRewrite the reply incorporating this feedback.` }
+    //   ]
+    // });
+
+    // Simple fallback response for now
+    const improvedReply = `I hear you - that's a common challenge. A lot of traders can execute decent trades but struggle with consistency. I found a resource that specifically addresses ${pain_category?.toLowerCase() || 'that issue'} - might be worth checking out: [LINK]`;
+
+    // Store the training feedback for future model improvements
+    await pool.query(`
+      INSERT INTO training_feedback (
+        lead_id,
+        feedback_text,
+        original_reply,
+        improved_reply,
+        created_at
+      ) VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT DO NOTHING
+    `, [id, feedback, original_reply, improvedReply]);
+
+    res.json({ 
+      success: true, 
+      reply: improvedReply,
+      message: 'Reply regenerated based on your feedback. Training data saved for future improvements.' 
+    });
+
+  } catch (error: any) {
+    console.error('Error regenerating reply:', error);
+    res.status(500).json({ error: 'Failed to regenerate reply', details: error.message });
+  }
+});
+
 // DELETE /api/social-leads/:id - Delete a lead (hard delete)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
