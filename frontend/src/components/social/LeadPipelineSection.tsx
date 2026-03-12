@@ -176,6 +176,7 @@ function LeadPipelineSection() {
       const newReply = response.data.reply;
       setEditedReply(newReply);
       setSelectedLead({ ...selectedLead, stage4_reply_text: newReply });
+      setIsEditing(true); // Enable edit mode to show new draft
       alert('Reply regenerated! Review and approve or edit as needed.');
       setTrainingFeedback(''); // Clear feedback after use
 
