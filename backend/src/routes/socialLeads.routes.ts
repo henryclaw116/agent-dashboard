@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import OpenAI from 'openai';
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // POST /api/social-leads - Create new lead (called by tower scanner)
 router.post('/', async (req: Request, res: Response) => {
@@ -414,20 +416,43 @@ router.post('/:id/regenerate-reply', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Training feedback is required' });
     }
 
-    // In a real implementation, this would call an AI service (OpenAI, Claude, etc.)
-    // For now, we'll create a simple template-based response
-    
-    // TODO: Replace with actual AI call
-    // const aiResponse = await openai.createChatCompletion({
-    //   model: 'gpt-4',
-    //   messages: [
-    //     { role: 'system', content: 'You are a helpful assistant for credit spread trading education...' },
-    //     { role: 'user', content: `Original post: ${post_text}\n\nOriginal reply: ${original_reply}\n\nTraining feedback: ${feedback}\n\nRewrite the reply incorporating this feedback.` }
-    //   ]
-    // });
+    // Call OpenAI GPT-4 to regenerate reply based on feedback
+    const systemPrompt = `You are a helpful social media assistant for Real Life Trading (RLT), a credit spread trading education company.
 
-    // Simple fallback response for now
-    const improvedReply = `I hear you - that's a common challenge. A lot of traders can execute decent trades but struggle with consistency. I found a resource that specifically addresses ${pain_category?.toLowerCase() || 'that issue'} - might be worth checking out: [LINK]`;
+Brand voice guidelines:
+- Warm, authentic, and supportive tone
+- Never make income claims or guarantees
+- Never use fake urgency or hype
+- Focus on education and process over results
+- Target: middle-class professionals seeking supplemental income
+- Avoid day-trading get-rich-quick language
+
+Your goal is to help frustrated traders by pointing them to relevant free RLT resources on YouTube.`;
+
+    const userPrompt = `Original social media post from user:
+"${post_text}"
+
+Current draft reply:
+"${original_reply}"
+
+User feedback on this reply:
+"${feedback}"
+
+Landing page to include: ${landing_page || 'https://youtube.com/@RealLifeTrading'}
+
+IMPORTANT: Rewrite the reply incorporating the user's feedback. Follow their instructions exactly. Keep [LINK] as a placeholder for the landing page URL.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const improvedReply = completion.choices[0].message.content || original_reply;
 
     // Store the training feedback for future model improvements
     await pool.query(`
