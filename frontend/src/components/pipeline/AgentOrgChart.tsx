@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, StopCircle, RotateCw, Activity, Clock, Cpu, AlertTriangle } from 'lucide-react';
+import { Play, Pause, StopCircle, RotateCw, Activity, Clock, Cpu, AlertTriangle, Link, X } from 'lucide-react';
+import { api } from '../../api/api';
+import RelationshipModal from './RelationshipModal';
 
 interface Agent {
   id: number;
@@ -34,7 +36,26 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [connectionMode, setConnectionMode] = useState(false);
+  const [connectingFrom, setConnectingFrom] = useState<Agent | null>(null);
+  const [connectingTo, setConnectingTo] = useState<Agent | null>(null);
+  const [relationships, setRelationships] = useState<any[]>([]);
+  const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Load relationships
+  useEffect(() => {
+    loadRelationships();
+  }, []);
+
+  const loadRelationships = async () => {
+    try {
+      const res = await api.get('/relationships');
+      setRelationships(res.data.relationships || []);
+    } catch (error) {
+      console.error('Failed to load relationships:', error);
+    }
+  };
 
   // Auto-layout agents if not positioned
   useEffect(() => {
@@ -77,13 +98,25 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
     if (e.button !== 0) return; // Only left click
     e.stopPropagation();
 
+    // Connection mode: select agents to connect
+    if (connectionMode) {
+      if (!connectingFrom) {
+        setConnectingFrom(agent);
+      } else if (connectingFrom.id !== agent.id) {
+        setConnectingTo(agent);
+        setShowRelationshipModal(true);
+      }
+      return;
+    }
+
+    // Normal mode: drag agent
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     setDraggingAgent(agent.id);
     setDragOffset({
-      x: (e.clientX - rect.left) / zoom - agent.position_x,
-      y: (e.clientY - rect.top) / zoom - agent.position_y
+      x: (e.clientX - rect.left) / zoom - agent.position_x - pan.x / zoom,
+      y: (e.clientY - rect.top) / zoom - agent.position_y - pan.y / zoom
     });
   };
 
@@ -174,29 +207,99 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
-  // Draw connection lines between parent and child agents
-  const renderConnections = () => {
+  // Draw relationship lines between connected agents
+  const renderRelationshipLines = () => {
+    return relationships.map(rel => {
+      const fromAgent = agents.find(a => a.id === rel.from_agent_id);
+      const toAgent = agents.find(a => a.id === rel.to_agent_id);
+      
+      if (!fromAgent || !toAgent) return null;
+
+      const x1 = fromAgent.position_x + 120; // Center of card
+      const y1 = fromAgent.position_y + 80;  // Bottom
+      const x2 = toAgent.position_x + 120;
+      const y2 = toAgent.position_y;         // Top
+
+      // Arrow marker style
+      const markerId = `arrow-${rel.id}`;
+      const strokeDasharray = rel.line_style === 'dashed' ? '8,4' : 
+                              rel.line_style === 'dotted' ? '2,4' : '0';
+
+      return (
+        <g key={rel.id}>
+          {/* Arrow marker definition */}
+          <defs>
+            <marker
+              id={markerId}
+              markerWidth="10"
+              markerHeight="10"
+              refX="9"
+              refY="3"
+              orient="auto"
+            >
+              <polygon
+                points="0 0, 10 3, 0 6"
+                fill={rel.line_color || '#3B82F6'}
+              />
+            </marker>
+          </defs>
+
+          {/* Connection line */}
+          <line
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={rel.line_color || '#3B82F6'}
+            strokeWidth="3"
+            strokeDasharray={strokeDasharray}
+            markerEnd={`url(#${markerId})`}
+            opacity="0.7"
+          />
+
+          {/* Label */}
+          {rel.label && (
+            <text
+              x={(x1 + x2) / 2}
+              y={(y1 + y2) / 2 - 10}
+              fill="#374151"
+              fontSize="12"
+              fontWeight="500"
+              textAnchor="middle"
+              style={{ pointerEvents: 'none' }}
+            >
+              {rel.label}
+            </text>
+          )}
+        </g>
+      );
+    });
+  };
+
+  // Draw parent-child hierarchy lines (faded background)
+  const renderHierarchyLines = () => {
     return agents
       .filter(agent => agent.parent_agent_id)
       .map(agent => {
         const parent = agents.find(a => a.id === agent.parent_agent_id);
         if (!parent) return null;
 
-        const x1 = parent.position_x + 120; // Center of parent card
-        const y1 = parent.position_y + 80; // Bottom of parent card
-        const x2 = agent.position_x + 120; // Center of child card
-        const y2 = agent.position_y; // Top of child card
+        const x1 = parent.position_x + 120;
+        const y1 = parent.position_y + 80;
+        const x2 = agent.position_x + 120;
+        const y2 = agent.position_y;
 
         return (
           <line
-            key={`line-${agent.id}`}
+            key={`hierarchy-${agent.id}`}
             x1={x1}
             y1={y1}
             x2={x2}
             y2={y2}
             stroke="#cbd5e0"
-            strokeWidth="2"
-            strokeDasharray="5,5"
+            strokeWidth="1"
+            strokeDasharray="3,3"
+            opacity="0.3"
           />
         );
       });
@@ -229,12 +332,50 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
           </button>
           <button
             onClick={autoLayoutAgents}
-            className="px-3 py-1 text-sm bg-rlt-blue text-white rounded hover:bg-blue-700"
+            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
           >
             Auto-Layout
           </button>
+          <button
+            onClick={() => {
+              setConnectionMode(!connectionMode);
+              setConnectingFrom(null);
+            }}
+            className={`px-3 py-1 text-sm rounded hover:opacity-90 flex items-center gap-1 ${
+              connectionMode
+                ? 'bg-red-500 text-white'
+                : 'bg-rlt-blue text-white'
+            }`}
+          >
+            {connectionMode ? (
+              <>
+                <X size={14} />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Link size={14} />
+                Connect
+              </>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Connection Mode Banner */}
+      {connectionMode && (
+        <div className="px-6 py-2 bg-blue-50 border-b border-blue-200 text-sm">
+          {connectingFrom ? (
+            <span className="text-blue-900 font-medium">
+              ✓ Selected: <strong>{connectingFrom.name}</strong> → Click another agent to connect
+            </span>
+          ) : (
+            <span className="text-blue-900">
+              Click an agent to start connecting
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Canvas */}
       <div
@@ -253,7 +394,8 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
           className="absolute inset-0 pointer-events-none"
           style={{ transform: `scale(${zoom})`, transformOrigin: '0 0' }}
         >
-          {renderConnections()}
+          {renderHierarchyLines()}
+          {renderRelationshipLines()}
         </svg>
 
         <div
@@ -398,8 +540,25 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
 
       {/* Instructions */}
       <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
-        <strong>Tip:</strong> Drag agents to reposition them. Click info (ⓘ) for details. Lines show reporting relationships.
+        <strong>Tip:</strong> Drag agents to reposition them. Click "Connect" to draw relationships between agents. Lines show workflow connections.
       </div>
+
+      {/* Relationship Modal */}
+      {showRelationshipModal && connectingFrom && connectingTo && (
+        <RelationshipModal
+          fromAgent={connectingFrom}
+          toAgent={connectingTo}
+          onClose={() => {
+            setShowRelationshipModal(false);
+            setConnectionMode(false);
+            setConnectingFrom(null);
+            setConnectingTo(null);
+          }}
+          onCreated={() => {
+            loadRelationships();
+          }}
+        />
+      )}
     </div>
   );
 }
