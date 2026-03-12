@@ -122,7 +122,7 @@ function AgentStats({ agent, onClose, onControlAction, onRefresh }: AgentStatsPr
                 </div>
               </div>
 
-              {agent.cpu_usage !== undefined && agent.cpu_usage !== null && (
+              {agent.cpu_usage !== undefined && agent.cpu_usage !== null && typeof agent.cpu_usage === 'number' && !isNaN(agent.cpu_usage) && (
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                     <Cpu size={14} />
@@ -134,7 +134,7 @@ function AgentStats({ agent, onClose, onControlAction, onRefresh }: AgentStatsPr
                 </div>
               )}
 
-              {agent.memory_usage_mb !== undefined && agent.memory_usage_mb !== null && (
+              {agent.memory_usage_mb !== undefined && agent.memory_usage_mb !== null && typeof agent.memory_usage_mb === 'number' && !isNaN(agent.memory_usage_mb) && (
                 <div className="bg-gray-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                     <Activity size={14} />

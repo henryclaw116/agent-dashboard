@@ -451,13 +451,13 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
 
                 {/* Metrics */}
                 <div className="grid grid-cols-2 gap-2 mb-2 text-xs">
-                  {agent.cpu_usage !== undefined && agent.cpu_usage !== null && (
+                  {agent.cpu_usage !== undefined && agent.cpu_usage !== null && typeof agent.cpu_usage === 'number' && !isNaN(agent.cpu_usage) && (
                     <div className="flex items-center gap-1 text-gray-600">
                       <Cpu size={12} />
                       <span>{agent.cpu_usage.toFixed(1)}%</span>
                     </div>
                   )}
-                  {agent.memory_usage_mb !== undefined && agent.memory_usage_mb !== null && (
+                  {agent.memory_usage_mb !== undefined && agent.memory_usage_mb !== null && typeof agent.memory_usage_mb === 'number' && !isNaN(agent.memory_usage_mb) && (
                     <div className="flex items-center gap-1 text-gray-600">
                       <Activity size={12} />
                       <span>{formatBytes(agent.memory_usage_mb * 1024 * 1024)}</span>
