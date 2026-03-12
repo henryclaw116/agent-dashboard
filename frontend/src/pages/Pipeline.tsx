@@ -112,12 +112,17 @@ function Pipeline() {
         api.get('/orchestration/stats')
       ]);
 
-      setAgents(agentsRes.data.agents);
-      setTasks(tasksRes.data.tasks);
-      setAlerts(alertsRes.data.alerts);
-      setStats(statsRes.data.stats);
-    } catch (error) {
+      setAgents(agentsRes.data.agents || []);
+      setTasks(tasksRes.data.tasks || []);
+      setAlerts(alertsRes.data.alerts || []);
+      setStats(statsRes.data.stats || null);
+    } catch (error: any) {
       console.error('Failed to load pipeline data:', error);
+      // Set empty defaults on error
+      setAgents([]);
+      setTasks([]);
+      setAlerts([]);
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -269,7 +274,7 @@ function Pipeline() {
             <div className="text-2xl font-bold text-gray-900">{stats.heartbeats.agents_reporting}</div>
             <div className="flex items-center gap-3 mt-2 text-xs">
               <span className="text-gray-600">reporting</span>
-              {stats.heartbeats.avg_cpu && (
+              {stats.heartbeats.avg_cpu !== null && stats.heartbeats.avg_cpu !== undefined && (
                 <span className="text-blue-600">
                   {stats.heartbeats.avg_cpu.toFixed(1)}% CPU
                 </span>
