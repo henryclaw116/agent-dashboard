@@ -273,7 +273,10 @@ router.patch('/:id', async (req: Request, res: Response) => {
       'assigned_to',
       'reviewed_by',
       'reviewed_at',
-      'archived_reason'
+      'archived_reason',
+      'stage4_reply_text',
+      'stage3_landing_url',
+      'draft_response'
     ];
 
     const fields: string[] = [];

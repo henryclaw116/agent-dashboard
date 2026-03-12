@@ -181,7 +181,7 @@ function LeadPipelineSection() {
     try {
       setSaving(true);
       await api.patch(`/social-leads/${selectedLead.id}`, {
-        draft_response: editedReply
+        stage4_reply_text: editedReply
       });
       setSelectedLead({ ...selectedLead, stage4_reply_text: editedReply });
       setIsEditing(false);
