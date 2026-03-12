@@ -42,6 +42,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [relationships, setRelationships] = useState<any[]>([]);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedRelationship, setSelectedRelationship] = useState<any | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Load relationships
@@ -55,6 +56,26 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
       setRelationships(res.data.relationships || []);
     } catch (error) {
       console.error('Failed to load relationships:', error);
+    }
+  };
+
+  const handleRelationshipClick = (relationship: any) => {
+    const fromAgent = agents.find(a => a.id === relationship.from_agent_id);
+    const toAgent = agents.find(a => a.id === relationship.to_agent_id);
+    
+    if (confirm(`Delete relationship?\n\n${fromAgent?.name} → ${toAgent?.name}\nType: ${relationship.relationship_type}\n\nThis will remove the connection and stop auto-routing.`)) {
+      deleteRelationship(relationship.id);
+    }
+  };
+
+  const deleteRelationship = async (relationshipId: number) => {
+    try {
+      await api.delete(`/relationships/${relationshipId}`);
+      await loadRelationships();
+      console.log('✓ Relationship deleted');
+    } catch (error: any) {
+      console.error('Failed to delete relationship:', error);
+      alert('Failed to delete relationship: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -240,7 +261,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             </marker>
           </defs>
 
-          {/* Connection line */}
+          {/* Connection line - clickable */}
           <line
             x1={x1}
             y1={y1}
@@ -251,6 +272,25 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
             strokeDasharray={strokeDasharray}
             markerEnd={`url(#${markerId})`}
             opacity="0.7"
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRelationshipClick(rel);
+            }}
+          />
+          {/* Invisible wider line for easier clicking */}
+          <line
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="transparent"
+            strokeWidth="20"
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRelationshipClick(rel);
+            }}
           />
 
           {/* Label */}
@@ -409,11 +449,19 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
               ? dragPosition
               : { x: agent.position_x, y: agent.position_y };
 
+            const isConnectingFromThis = connectionMode && connectingFrom?.id === agent.id;
+            const isSelectable = connectionMode && !connectingFrom;
+            const canConnectTo = connectionMode && connectingFrom && connectingFrom.id !== agent.id;
+
             return (
             <div
               key={agent.id}
               className={`agent-card absolute bg-white rounded-lg shadow-lg border-2 ${getStatusColor(agent.status)} ${
-                isDragging ? 'cursor-grabbing shadow-2xl scale-105 transition-none' : 'cursor-grab hover:shadow-xl transition-all'
+                isDragging ? 'cursor-grabbing shadow-2xl scale-105 transition-none' : 
+                isConnectingFromThis ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-300 cursor-pointer' :
+                canConnectTo ? 'cursor-pointer hover:border-green-500 hover:bg-green-50' :
+                isSelectable ? 'cursor-pointer hover:border-blue-400' :
+                'cursor-grab hover:shadow-xl transition-all'
               }`}
               style={{
                 left: position.x,

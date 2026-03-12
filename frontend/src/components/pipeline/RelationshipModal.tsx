@@ -117,7 +117,13 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
       onClose();
     } catch (error: any) {
       console.error('Failed to create relationship:', error);
-      alert('Failed to create relationship: ' + (error.response?.data?.error || error.message));
+      const errorMsg = error.response?.data?.error || error.message;
+      
+      if (errorMsg.includes('duplicate') || errorMsg.includes('unique')) {
+        alert(`A relationship of this type already exists between these agents.\n\nTo modify it:\n1. Click Cancel\n2. Delete the existing connection\n3. Create a new one with your desired settings`);
+      } else {
+        alert('Failed to create relationship: ' + errorMsg);
+      }
     } finally {
       setCreating(false);
     }
