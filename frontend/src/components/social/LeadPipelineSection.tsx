@@ -103,7 +103,13 @@ function LeadPipelineSection() {
       .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
     
     try {
+      // Copy reply to clipboard
       await navigator.clipboard.writeText(finalReply);
+      
+      // Open the original post in a new tab
+      if (selectedLead.post_url) {
+        window.open(selectedLead.post_url, '_blank');
+      }
       
       // Mark as approved but not sent
       await api.post(`/social-leads/${selectedLead.id}/approve`, {
@@ -111,7 +117,7 @@ function LeadPipelineSection() {
         reviewed_by: 'Tony'
       });
       
-      alert('✅ Reply copied to clipboard! Paste it manually on the platform.');
+      alert('✅ Reply copied to clipboard! Tab opened - paste your reply there.');
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
