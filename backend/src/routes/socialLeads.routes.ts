@@ -106,7 +106,7 @@ router.get('/', async (req: Request, res: Response) => {
       paramIndex++;
     }
 
-    query += ` ORDER BY stage2_score DESC, scanned_at DESC`;
+    query += ` ORDER BY stage2_score DESC, created_at DESC`;
     query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(Number(limit), Number(offset));
 
