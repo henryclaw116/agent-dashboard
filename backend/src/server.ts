@@ -32,6 +32,7 @@ import { createPipelineRouter } from './routes/pipeline.routes';
 import { createSocialPipelineRouter } from './routes/social-pipeline.routes';
 import socialLeadsRoutes from './routes/socialLeads.routes';
 import orchestrationRoutes from './routes/orchestration.routes';
+import relationshipsRoutes from './routes/relationships.routes';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -94,6 +95,7 @@ app.use('/api/pipeline', createPipelineRouter(db));
 app.use('/api/social-pipeline', createSocialPipelineRouter(db));
 app.use('/api/social-leads', socialLeadsRoutes);
 app.use('/api/orchestration', orchestrationRoutes);
+app.use('/api/relationships', relationshipsRoutes);
 
 // 404 handler
 app.use((req, res) => {
