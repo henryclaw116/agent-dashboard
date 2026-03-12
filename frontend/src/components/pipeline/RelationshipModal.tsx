@@ -13,6 +13,8 @@ interface RelationshipModalProps {
   toAgent: Agent;
   onClose: () => void;
   onCreated: (relationshipId?: number, relationshipData?: any) => void;
+  existingRelationship?: any; // If provided, we're editing instead of creating
+  onDeleted?: () => void;
 }
 
 const RELATIONSHIP_TYPES = [
@@ -73,16 +75,19 @@ const LINE_STYLES = [
   { value: 'dotted', label: 'Dotted' }
 ];
 
-function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: RelationshipModalProps) {
-  const [relationshipType, setRelationshipType] = useState('feeds_to');
-  const [autoRoute, setAutoRoute] = useState(true);
-  const [requireApproval, setRequireApproval] = useState(false);
-  const [priorityFilter, setPriorityFilter] = useState(false);
-  const [tags, setTags] = useState('');
-  const [lineStyle, setLineStyle] = useState('solid');
-  const [label, setLabel] = useState('');
-  const [notes, setNotes] = useState('');
+function RelationshipModal({ fromAgent, toAgent, onClose, onCreated, existingRelationship, onDeleted }: RelationshipModalProps) {
+  const isEditing = !!existingRelationship;
+  
+  const [relationshipType, setRelationshipType] = useState(existingRelationship?.relationship_type || 'feeds_to');
+  const [autoRoute, setAutoRoute] = useState(existingRelationship?.workflow_config?.auto_route_tasks ?? true);
+  const [requireApproval, setRequireApproval] = useState(existingRelationship?.workflow_config?.requires_approval ?? false);
+  const [priorityFilter, setPriorityFilter] = useState(!!existingRelationship?.workflow_config?.priority_threshold);
+  const [tags, setTags] = useState((existingRelationship?.workflow_config?.task_filter?.tags || []).join(', '));
+  const [lineStyle, setLineStyle] = useState(existingRelationship?.line_style || 'solid');
+  const [label, setLabel] = useState(existingRelationship?.label || '');
+  const [notes, setNotes] = useState(existingRelationship?.notes || '');
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const selectedType = RELATIONSHIP_TYPES.find(t => t.value === relationshipType);
   const lineColor = selectedType?.color || '#3B82F6';
@@ -92,7 +97,7 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
   const isDownward = toAgent.position_y > fromAgent.position_y;
   const isLateral = Math.abs(toAgent.position_y - fromAgent.position_y) < 50;
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     try {
       setCreating(true);
 
@@ -100,7 +105,7 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
       if (autoRoute) workflowConfig.auto_route_tasks = true;
       if (requireApproval) workflowConfig.requires_approval = true;
       if (priorityFilter) workflowConfig.priority_threshold = { priority: 3 };
-      if (tags) workflowConfig.task_filter = { tags: tags.split(',').map(t => t.trim()) };
+      if (tags) workflowConfig.task_filter = { tags: tags.split(',').map((t: string) => t.trim()) };
 
       const relationshipData = {
         from_agent_id: fromAgent.id,
@@ -113,21 +118,51 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
         notes
       };
 
-      const response = await api.post('/relationships', relationshipData);
+      if (isEditing) {
+        // Update existing relationship
+        const response = await api.put(`/relationships/${existingRelationship.id}`, relationshipData);
+        onCreated(existingRelationship.id, relationshipData);
+      } else {
+        // Create new relationship
+        const response = await api.post('/relationships', relationshipData);
+        onCreated(response.data.relationship?.id, relationshipData);
+      }
       
-      onCreated(response.data.relationship?.id, relationshipData);
       onClose();
     } catch (error: any) {
-      console.error('Failed to create relationship:', error);
+      console.error(`Failed to ${isEditing ? 'update' : 'create'} relationship:`, error);
       const errorMsg = error.response?.data?.error || error.message;
       
       if (errorMsg.includes('duplicate') || errorMsg.includes('unique')) {
-        alert(`A relationship of this type already exists between these agents.\n\nTo modify it:\n1. Click Cancel\n2. Delete the existing connection\n3. Create a new one with your desired settings`);
+        alert(`A relationship of this type already exists between these agents.\n\nTo modify it:\n1. Click Cancel\n2. Click the existing line to edit it`);
       } else {
-        alert('Failed to create relationship: ' + errorMsg);
+        alert(`Failed to ${isEditing ? 'update' : 'create'} relationship: ` + errorMsg);
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isEditing || !existingRelationship) return;
+    
+    if (!confirm(`Delete this connection?\n\n${fromAgent.name} → ${toAgent.name}\nType: ${relationshipType}\n\nThis will remove the connection and stop auto-routing.`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await api.delete(`/relationships/${existingRelationship.id}`);
+      
+      if (onDeleted) {
+        onDeleted();
+      }
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to delete relationship:', error);
+      alert('Failed to delete relationship: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -137,10 +172,17 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Connect Agents</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {isEditing ? 'Edit Connection' : 'Connect Agents'}
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
               {fromAgent.name} → {toAgent.name}
             </p>
+            {isEditing && selectedType && (
+              <p className="text-xs text-gray-500 mt-1">
+                Current: {selectedType.label}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -334,31 +376,54 @@ function RelationshipModal({ fromAgent, toAgent, onClose, onCreated }: Relations
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            disabled={creating}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {creating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Link size={16} />
-                Create Connection
-              </>
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
+          <div>
+            {isEditing && (
+              <button
+                onClick={handleDelete}
+                disabled={creating || deleting}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-700" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <X size={16} />
+                    Delete Connection
+                  </>
+                )}
+              </button>
             )}
-          </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              disabled={creating || deleting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={creating || deleting}
+              className="px-4 py-2 bg-rlt-blue text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {creating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  {isEditing ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                <>
+                  <Link size={16} />
+                  {isEditing ? 'Update Connection' : 'Create Connection'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

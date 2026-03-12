@@ -45,7 +45,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
   const [relationships, setRelationships] = useState<any[]>([]);
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
-  const [selectedRelationship, setSelectedRelationship] = useState<any | null>(null);
+  const [editingRelationship, setEditingRelationship] = useState<any | null>(null);
   const [undoStack, setUndoStack] = useState<any[]>([]);
   const [redoStack, setRedoStack] = useState<any[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -85,9 +85,13 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
     const fromAgent = agents.find(a => a.id === relationship.from_agent_id);
     const toAgent = agents.find(a => a.id === relationship.to_agent_id);
     
-    if (confirm(`Delete relationship?\n\n${fromAgent?.name} → ${toAgent?.name}\nType: ${relationship.relationship_type}\n\nThis will remove the connection and stop auto-routing.`)) {
-      deleteRelationship(relationship.id);
-    }
+    if (!fromAgent || !toAgent) return;
+
+    // Set up editing mode
+    setConnectingFrom(fromAgent);
+    setConnectingTo(toAgent);
+    setEditingRelationship(relationship);
+    setShowRelationshipModal(true);
   };
 
   const deleteRelationship = async (relationshipId: number) => {
@@ -801,21 +805,26 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
         <RelationshipModal
           fromAgent={connectingFrom}
           toAgent={connectingTo}
+          existingRelationship={editingRelationship}
           onClose={() => {
             setShowRelationshipModal(false);
             setConnectionMode(false);
             setConnectingFrom(null);
             setConnectingTo(null);
+            setEditingRelationship(null);
           }}
           onCreated={(relationshipId?: number, relationshipData?: any) => {
             // Save for undo
-            if (relationshipId && relationshipData) {
+            if (relationshipId && relationshipData && !editingRelationship) {
               saveStateForUndo({
                 type: 'create_relationship',
                 relationshipId,
                 relationship: relationshipData
               });
             }
+            loadRelationships();
+          }}
+          onDeleted={() => {
             loadRelationships();
           }}
         />
