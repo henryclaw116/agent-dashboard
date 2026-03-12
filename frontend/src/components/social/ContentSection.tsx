@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Image, CheckCircle, XCircle, Clock, ExternalLink, Download } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../../api/api';
 
 interface SocialContent {
   id: number;
@@ -29,7 +29,7 @@ function ContentSection() {
   const loadContent = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/social-media/content');
+      const res = await api.get('/social-media/content');
       setContent(res.data.content);
     } catch (error) {
       console.error('Failed to load content:', error);
@@ -40,7 +40,7 @@ function ContentSection() {
 
   const handleReview = async (id: number, status: 'approved' | 'rejected') => {
     try {
-      await axios.put(`/api/social-media/content/${id}/review`, {
+      await api.put(`/social-media/content/${id}/review`, {
         status,
         feedback: reviewFeedback
       });
@@ -55,7 +55,7 @@ function ContentSection() {
 
   const handleDownload = async (contentItem: SocialContent) => {
     try {
-      const response = await axios.get(`/api/social-media/content/${contentItem.id}/download`, {
+      const response = await api.get(`/social-media/content/${contentItem.id}/download`, {
         responseType: 'blob'
       });
       

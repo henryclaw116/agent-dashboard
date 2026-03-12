@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, ExternalLink, CheckCircle, XCircle, Clock, Zap } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../../api/api';
 
 interface ViralIdea {
   id: number;
@@ -33,7 +33,7 @@ function ViralIdeasSection() {
   const loadIdeas = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/viral-content/ideas');
+      const res = await api.get('/viral-content/ideas');
       setIdeas(res.data.ideas);
     } catch (error) {
       console.error('Failed to load ideas:', error);
@@ -44,7 +44,7 @@ function ViralIdeasSection() {
 
   const handleReview = async (id: number, status: 'approved' | 'rejected') => {
     try {
-      await axios.put(`/api/viral-content/ideas/${id}/review`, {
+      await api.put(`/viral-content/ideas/${id}/review`, {
         status,
         review_notes: reviewFeedback
       });

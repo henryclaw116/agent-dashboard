@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle, TrendingUp, Instagram, Youtube, Twitter } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../../api/api';
 import { format, addDays, startOfWeek } from 'date-fns';
 
 interface DailyPlan {
@@ -40,8 +40,8 @@ function ScheduleSection() {
     try {
       setLoading(true);
       const [plansRes, scheduleRes] = await Promise.all([
-        axios.get('/api/viral-content/daily-plan', { params: { status: 'pending_approval' } }),
-        axios.get('/api/viral-content/schedule')
+        api.get('/viral-content/daily-plan', { params: { status: 'pending_approval' } }),
+        api.get('/viral-content/schedule')
       ]);
       setPlans(plansRes.data.plans);
       setSchedule(scheduleRes.data.schedule);
@@ -54,7 +54,7 @@ function ScheduleSection() {
 
   const handleApprovePlan = async (planId: number) => {
     try {
-      await axios.put(`/api/viral-content/daily-plan/${planId}/approve`);
+      await api.put(`/viral-content/daily-plan/${planId}/approve`);
       loadData();
     } catch (error) {
       console.error('Approval failed:', error);

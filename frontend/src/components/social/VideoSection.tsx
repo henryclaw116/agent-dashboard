@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Upload, Download, Clock, CheckCircle, Play } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../../api/api';
 
 interface Video {
   id: number;
@@ -31,7 +31,7 @@ function VideoSection() {
     try {
       setLoading(true);
       const params = filter !== 'all' ? { status: filter } : {};
-      const res = await axios.get('/api/social-media/videos', { params });
+      const res = await api.get('/social-media/videos', { params });
       setVideos(res.data.videos);
     } catch (error) {
       console.error('Failed to load videos:', error);
@@ -59,7 +59,7 @@ function VideoSection() {
 
     try {
       setUploading(true);
-      await axios.post('/api/social-media/videos/upload', formData, {
+      await api.post('/social-media/videos/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -78,7 +78,7 @@ function VideoSection() {
 
   const handleDownload = async (video: Video) => {
     try {
-      const response = await axios.get(`/api/social-media/videos/${video.id}/download`, {
+      const response = await api.get(`/social-media/videos/${video.id}/download`, {
         responseType: 'blob'
       });
       
