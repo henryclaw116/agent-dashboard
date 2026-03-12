@@ -4,15 +4,20 @@ import { api } from '../../api/api';
 
 interface PipelineLead {
   id: number;
-  user: string;
+  username: string;
   platform: string;
-  content: string;
-  score?: number;
-  pain_type?: string;
-  landing_page?: string;
-  reply_draft?: string;
-  bitly_link?: string;
-  current_stage: string;
+  post_text: string;
+  post_url: string;
+  stage1_status?: string;
+  stage2_score?: number;
+  stage2_pain_category?: string;
+  stage2_pain_summary?: string;
+  stage3_landing_url?: string;
+  stage3_reasoning?: string;
+  stage4_reply_text?: string;
+  stage5_status?: string;
+  stage6_short_link?: string;
+  stage6_final_reply?: string;
   status: string;
   created_at: string;
 }
@@ -31,7 +36,10 @@ function LeadPipelineSection() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStage, setSelectedStage] = useState<string>('all');
-  const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
+  const [selectedLead, setselectedLead] = useState<PipelineLead | null>(null);
+  const [editedReply, setEditedReply] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -73,6 +81,72 @@ function LeadPipelineSection() {
     if (seconds < 60) return `${seconds}s ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     return `${Math.floor(seconds / 3600)}h ago`;
+  };
+
+  const handleApprove = async () => {
+    if (!selectedLead) return;
+    
+    try {
+      setSaving(true);
+      await api.post(`/social-leads/${selectedLead.id}/approve`, {
+        approved_response: editedReply || selectedLead.stage4_reply_text,
+        reviewed_by: 'Tony'
+      });
+      alert('Lead approved! Ready to send.');
+      setselectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to approve lead:', error);
+      alert('Failed to approve lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedLead) return;
+    
+    if (!confirm('Reject this lead? This will archive it.')) return;
+    
+    try {
+      setSaving(true);
+      await api.post(`/social-leads/${selectedLead.id}/archive`, {
+        reason: 'Rejected by Tony'
+      });
+      alert('Lead rejected and archived.');
+      setselectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to reject lead:', error);
+      alert('Failed to reject lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveReply = async () => {
+    if (!selectedLead) return;
+    
+    try {
+      setSaving(true);
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        draft_response: editedReply
+      });
+      setselectedLead({ ...selectedLead, stage4_reply_text: editedReply });
+      setIsEditing(false);
+      alert('Reply updated!');
+    } catch (error) {
+      console.error('Failed to save reply:', error);
+      alert('Failed to save reply');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openLeadDetails = (lead: PipelineLead) => {
+    setselectedLead(lead);
+    setEditedReply(lead.stage4_reply_text || '');
+    setIsEditing(false);
   };
 
   return (
@@ -156,51 +230,51 @@ function LeadPipelineSection() {
                   <div className="flex-1">
                     {/* User & Platform */}
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold text-gray-900">{lead.user}</span>
+                      <span className="font-semibold text-gray-900">{lead.username}</span>
                       <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
                         {lead.platform}
                       </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium bg-${getStageColor(lead.current_stage)}-100 text-${getStageColor(lead.current_stage)}-700`}>
-                        {STAGES.find(s => s.id === lead.current_stage)?.name || lead.current_stage}
+                      <span className={`px-2 py-1 rounded text-xs font-medium bg-${getStageColor(lead.stage1_status)}-100 text-${getStageColor(lead.stage1_status)}-700`}>
+                        {STAGES.find(s => s.id === lead.stage1_status)?.name || lead.stage1_status}
                       </span>
                       <span className="text-xs text-gray-500">{formatTime(lead.created_at)}</span>
                     </div>
 
                     {/* Original Content */}
-                    <p className="text-sm text-gray-700 mb-2 line-clamp-2">{lead.content}</p>
+                    <p className="text-sm text-gray-700 mb-2 line-clamp-2">{lead.post_text}</p>
 
                     {/* Stage-specific data */}
                     <div className="flex items-center gap-4 text-xs text-gray-600">
-                      {lead.score && (
+                      {lead.stage2_score && (
                         <span className="flex items-center gap-1">
                           <TrendingUp size={12} />
-                          Score: {lead.score}
+                          Score: {lead.stage2_score}
                         </span>
                       )}
-                      {lead.pain_type && (
-                        <span>Pain: {lead.pain_type}</span>
+                      {lead.stage2_pain_category && (
+                        <span>Pain: {lead.stage2_pain_category}</span>
                       )}
-                      {lead.landing_page && (
-                        <span>Landing: {lead.landing_page}</span>
+                      {lead.stage3_landing_url && (
+                        <span>Landing: {lead.stage3_landing_url}</span>
                       )}
-                      {lead.bitly_link && (
+                      {lead.stage6_short_link && (
                         <a
-                          href={lead.bitly_link}
+                          href={lead.stage6_short_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-blue-600 hover:underline"
                         >
                           <LinkIcon size={12} />
-                          {lead.bitly_link}
+                          {lead.stage6_short_link}
                         </a>
                       )}
                     </div>
 
                     {/* Reply Draft (if exists) */}
-                    {lead.reply_draft && (
+                    {lead.stage4_reply_text && (
                       <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
                         <strong className="text-blue-900">Draft Reply:</strong>
-                        <p className="text-blue-800 mt-1">{lead.reply_draft}</p>
+                        <p className="text-blue-800 mt-1">{lead.stage4_reply_text}</p>
                       </div>
                     )}
                   </div>
@@ -213,7 +287,7 @@ function LeadPipelineSection() {
                       </button>
                     )}
                     <button 
-                      onClick={() => setSelectedLead(lead)}
+                      onClick={() => openLeadDetails(lead)}
                       className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"
                     >
                       Details
@@ -265,7 +339,7 @@ function LeadPipelineSection() {
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="text-xl font-bold text-gray-900">Lead Details</h2>
               <button
-                onClick={() => setSelectedLead(null)}
+                onClick={() => setselectedLead(null)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
               >
                 ✕
@@ -281,7 +355,7 @@ function LeadPipelineSection() {
                   <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded font-medium">
                     {selectedLead.platform}
                   </span>
-                  <span className="font-medium text-gray-900">{selectedLead.user}</span>
+                  <span className="font-medium text-gray-900">{selectedLead.username}</span>
                   <span className="text-sm text-gray-500">{formatTime(selectedLead.created_at)}</span>
                 </div>
               </div>
@@ -290,65 +364,100 @@ function LeadPipelineSection() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Original Post</h3>
                 <p className="text-gray-800 bg-gray-50 p-4 rounded border border-gray-200">
-                  {selectedLead.content}
+                  {selectedLead.post_text}
                 </p>
               </div>
 
               {/* Stage Data */}
-              {selectedLead.score && (
+              {selectedLead.stage2_score && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Score</h3>
                   <div className="flex items-center gap-2">
                     <TrendingUp size={16} className="text-purple-600" />
-                    <span className="text-2xl font-bold text-gray-900">{selectedLead.score}</span>
+                    <span className="text-2xl font-bold text-gray-900">{selectedLead.stage2_score}</span>
                     <span className="text-sm text-gray-600">/ 100</span>
                   </div>
                 </div>
               )}
 
-              {selectedLead.pain_type && (
+              {selectedLead.stage2_pain_category && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Pain Category</h3>
                   <span className="px-3 py-1 bg-red-100 text-red-700 rounded font-medium">
-                    {selectedLead.pain_type}
+                    {selectedLead.stage2_pain_category}
                   </span>
                 </div>
               )}
 
-              {selectedLead.landing_page && (
+              {selectedLead.stage3_landing_url && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Assigned Landing Page</h3>
                   <a
-                    href={selectedLead.landing_page}
+                    href={selectedLead.stage3_landing_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
                   >
-                    {selectedLead.landing_page}
+                    {selectedLead.stage3_landing_url}
                   </a>
                 </div>
               )}
 
-              {selectedLead.reply_draft && (
+              {selectedLead.stage4_reply_text && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Draft Reply</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                    <p className="text-blue-900">{selectedLead.reply_draft}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-gray-700">Draft Reply</h3>
+                    {!isEditing ? (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveReply}
+                          disabled={saving}
+                          className="text-sm text-green-600 hover:underline disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setIsEditing(false); setEditedReply(selectedLead.stage4_reply_text || ''); }}
+                          className="text-sm text-gray-600 hover:underline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  {!isEditing ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                      <p className="text-blue-900 whitespace-pre-wrap">{selectedLead.stage4_reply_text}</p>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={editedReply}
+                      onChange={(e) => setEditedReply(e.target.value)}
+                      className="w-full px-4 py-3 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={6}
+                    />
+                  )}
                 </div>
               )}
 
-              {selectedLead.bitly_link && (
+              {selectedLead.stage6_short_link && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">Tracking Link</h3>
                   <a
-                    href={selectedLead.bitly_link}
+                    href={selectedLead.stage6_short_link}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-blue-600 hover:underline"
                   >
                     <LinkIcon size={16} />
-                    {selectedLead.bitly_link}
+                    {selectedLead.stage6_short_link}
                   </a>
                 </div>
               )}
@@ -356,25 +465,36 @@ function LeadPipelineSection() {
               {/* Status */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Current Stage</h3>
-                <span className={`px-3 py-1 rounded font-medium bg-${getStageColor(selectedLead.current_stage)}-100 text-${getStageColor(selectedLead.current_stage)}-700`}>
-                  {STAGES.find(s => s.id === selectedLead.current_stage)?.name || selectedLead.current_stage}
+                <span className={`px-3 py-1 rounded font-medium bg-${getStageColor(selectedLead.stage1_status)}-100 text-${getStageColor(selectedLead.stage1_status)}-700`}>
+                  {STAGES.find(s => s.id === selectedLead.stage1_status)?.name || selectedLead.stage1_status}
                 </span>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-              {selectedLead.status === 'ready' && (
-                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Approve & Send
-                </button>
-              )}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
               <button
-                onClick={() => setSelectedLead(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                onClick={handleReject}
+                disabled={saving}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Close
+                {saving ? 'Rejecting...' : 'Reject'}
               </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedLead(null)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={saving}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Approving...' : 'Approve & Send'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
