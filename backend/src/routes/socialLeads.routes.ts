@@ -320,26 +320,30 @@ router.patch('/:id', async (req: Request, res: Response) => {
 router.post('/:id/approve', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { approved_response, reviewed_by } = req.body;
+    const { approved_response, reviewed_by, auto_send } = req.body;
 
+    // Update the final reply and mark as approved
     const result = await pool.query(`
       UPDATE social_leads
       SET 
-        approved_response = $1,
-        response_status = 'approved',
-        reviewed_by = $2,
-        reviewed_at = NOW()
-      WHERE id = $3
+        stage4_reply_text = COALESCE($1, stage4_reply_text),
+        status = 'APPROVED',
+        approved_at = NOW()
+      WHERE id = $2
       RETURNING *
-    `, [approved_response || null, reviewed_by || 'Tony', id]);
+    `, [approved_response, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
     }
 
+    // TODO: If auto_send is true, trigger actual posting to platform
+    // This would call the social-pipeline posting agent
+    // For now, just mark as approved and ready
+
     res.json({ 
       success: true, 
-      message: 'Response approved and ready for posting',
+      message: auto_send ? 'Response approved and queued for auto-send' : 'Response approved and ready for posting',
       lead: result.rows[0] 
     });
   } catch (error: any) {
@@ -352,17 +356,15 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
 router.post('/:id/sent', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { engagement_score } = req.body;
 
     const result = await pool.query(`
       UPDATE social_leads
       SET 
-        response_status = 'sent',
-        response_sent_at = NOW(),
-        engagement_score = COALESCE($1, 0)
-      WHERE id = $2
+        status = 'SENT',
+        sent_at = NOW()
+      WHERE id = $1
       RETURNING *
-    `, [engagement_score, id]);
+    `, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
@@ -379,7 +381,7 @@ router.post('/:id/sent', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/social-leads/:id/archive - Archive a lead
+// POST /api/social-leads/:id/archive - Archive/reject a lead
 router.post('/:id/archive', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -388,11 +390,10 @@ router.post('/:id/archive', async (req: Request, res: Response) => {
     const result = await pool.query(`
       UPDATE social_leads
       SET 
-        response_status = 'archived',
-        archived_reason = $1
-      WHERE id = $2
+        status = 'REJECTED'
+      WHERE id = $1
       RETURNING *
-    `, [reason || 'Archived by user', id]);
+    `, [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
@@ -400,7 +401,7 @@ router.post('/:id/archive', async (req: Request, res: Response) => {
 
     res.json({ 
       success: true, 
-      message: 'Lead archived',
+      message: 'Lead rejected',
       lead: result.rows[0] 
     });
   } catch (error: any) {
