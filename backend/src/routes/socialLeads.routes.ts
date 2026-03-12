@@ -276,7 +276,11 @@ router.patch('/:id', async (req: Request, res: Response) => {
       'archived_reason',
       'stage4_reply_text',
       'stage3_landing_url',
-      'draft_response'
+      'draft_response',
+      'sent_at',
+      'reply_url',
+      'reply_screenshot_url',
+      'status'
     ];
 
     const fields: string[] = [];

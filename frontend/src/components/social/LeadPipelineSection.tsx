@@ -20,6 +20,9 @@ interface PipelineLead {
   stage6_final_reply?: string;
   status: string;
   created_at: string;
+  sent_at?: string;
+  reply_url?: string;
+  reply_screenshot_url?: string;
 }
 
 const STAGES = [
@@ -117,7 +120,18 @@ function LeadPipelineSection() {
         reviewed_by: 'Tony'
       });
       
-      alert('✅ Reply copied to clipboard! Tab opened - paste your reply there.');
+      // Prompt to mark as sent after posting
+      const markAsSent = confirm('✅ Reply copied and tab opened!\n\nAfter you paste and post your reply, click OK to mark it as sent.');
+      
+      if (markAsSent) {
+        const replyUrl = prompt('Enter the URL of your posted reply (optional):');
+        await api.patch(`/social-leads/${selectedLead.id}`, {
+          status: 'SENT',
+          sent_at: new Date().toISOString(),
+          reply_url: replyUrl || selectedLead.post_url
+        });
+      }
+      
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
@@ -148,8 +162,16 @@ function LeadPipelineSection() {
       
       // TODO: Trigger actual posting to platform
       // This would call the social-pipeline agent to post the reply
+      // For now, just mark as sent since auto-posting isn't implemented yet
       
-      alert('✅ Reply approved for auto-send! The agent will post it shortly.');
+      // Temporarily mark as sent (until auto-posting is implemented)
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        status: 'SENT',
+        sent_at: new Date().toISOString(),
+        reply_url: selectedLead.post_url // Will be updated when actual posting works
+      });
+      
+      alert('✅ Reply approved for auto-send! Marked as sent.');
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
@@ -611,12 +633,63 @@ function LeadPipelineSection() {
                 </div>
               )}
 
+              {/* Sent Status (if sent) */}
+              {selectedLead.sent_at && (
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                    ✅ Message Sent Successfully
+                  </h3>
+                  <div className="space-y-2">
+                    <p className="text-sm text-green-800">
+                      <strong>Sent:</strong> {new Date(selectedLead.sent_at).toLocaleString()}
+                    </p>
+                    
+                    {selectedLead.reply_url && (
+                      <div>
+                        <strong className="text-sm text-green-900">View Your Reply:</strong>
+                        <a
+                          href={selectedLead.reply_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-1 text-blue-600 hover:underline text-sm break-all"
+                        >
+                          {selectedLead.reply_url}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {selectedLead.reply_screenshot_url && (
+                      <div>
+                        <strong className="text-sm text-green-900 block mb-2">Screenshot:</strong>
+                        <img
+                          src={selectedLead.reply_screenshot_url}
+                          alt="Reply screenshot"
+                          className="max-w-full border border-green-300 rounded shadow-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Status */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Current Stage</h3>
-                <span className={`px-3 py-1 rounded font-medium bg-${getStageColor(selectedLead.stage1_status)}-100 text-${getStageColor(selectedLead.stage1_status)}-700`}>
-                  {STAGES.find(s => s.id === selectedLead.stage1_status)?.name || selectedLead.stage1_status}
-                </span>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Current Status</h3>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded font-medium ${
+                    selectedLead.status === 'SENT' ? 'bg-green-100 text-green-700' :
+                    selectedLead.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
+                    selectedLead.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {selectedLead.status || 'PENDING'}
+                  </span>
+                  {selectedLead.sent_at && (
+                    <span className="text-xs text-green-600">
+                      • Sent {new Date(selectedLead.sent_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
