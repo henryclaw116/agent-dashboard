@@ -378,10 +378,30 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
         ? dragPosition
         : { x: toAgent.position_x, y: toAgent.position_y };
 
-      const x1 = fromPos.x + 120; // Center of card (width 240px / 2)
-      const y1 = fromPos.y + 80;  // Bottom of card
-      const x2 = toPos.x + 120;   // Center of card
-      const y2 = toPos.y;         // Top of card
+      // Card dimensions (width: 240px, height: ~160px)
+      const cardWidth = 240;
+      const cardHeight = 160;
+
+      // Determine which agent is higher (smaller Y = higher on screen)
+      const fromIsHigher = fromPos.y < toPos.y;
+
+      let x1, y1, x2, y2;
+
+      if (fromIsHigher) {
+        // fromAgent is higher, toAgent is lower
+        // Line goes FROM bottom of fromAgent TO top of toAgent
+        x1 = fromPos.x + cardWidth / 2;  // Center-X of fromAgent
+        y1 = fromPos.y + cardHeight;     // Bottom of fromAgent
+        x2 = toPos.x + cardWidth / 2;    // Center-X of toAgent
+        y2 = toPos.y;                    // Top of toAgent
+      } else {
+        // toAgent is higher, fromAgent is lower
+        // Line goes FROM top of fromAgent TO bottom of toAgent
+        x1 = fromPos.x + cardWidth / 2;  // Center-X of fromAgent
+        y1 = fromPos.y;                  // Top of fromAgent
+        x2 = toPos.x + cardWidth / 2;    // Center-X of toAgent
+        y2 = toPos.y + cardHeight;       // Bottom of toAgent
+      }
 
       // Arrow marker style
       const markerId = `arrow-${rel.id}`;
