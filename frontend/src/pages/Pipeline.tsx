@@ -231,10 +231,10 @@ function Pipeline() {
               <h3 className="text-sm font-medium text-gray-700">Agents</h3>
               <Users className="text-gray-400" size={20} />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.agents.total}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.agents.total || 0}</div>
             <div className="flex items-center gap-3 mt-2 text-xs">
-              <span className="text-green-600">{stats.agents.active} active</span>
-              <span className="text-gray-600">{stats.agents.offline} offline</span>
+              <span className="text-green-600">{stats.agents.active || 0} active</span>
+              <span className="text-gray-600">{stats.agents.offline || 0} offline</span>
             </div>
           </div>
 
@@ -244,11 +244,11 @@ function Pipeline() {
               <h3 className="text-sm font-medium text-gray-700">Tasks (24h)</h3>
               <Zap className="text-gray-400" size={20} />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.tasks.total}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.tasks.total || 0}</div>
             <div className="flex items-center gap-3 mt-2 text-xs">
-              <span className="text-yellow-600">{stats.tasks.pending} pending</span>
-              <span className="text-blue-600">{stats.tasks.in_progress} active</span>
-              <span className="text-green-600">{stats.tasks.completed} done</span>
+              <span className="text-yellow-600">{stats.tasks.pending || 0} pending</span>
+              <span className="text-blue-600">{stats.tasks.in_progress || 0} active</span>
+              <span className="text-green-600">{stats.tasks.completed || 0} done</span>
             </div>
           </div>
 
@@ -258,10 +258,10 @@ function Pipeline() {
               <h3 className="text-sm font-medium text-gray-700">Alerts</h3>
               <AlertTriangle className="text-gray-400" size={20} />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.alerts.new}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.alerts.new || 0}</div>
             <div className="flex items-center gap-3 mt-2 text-xs">
-              <span className="text-red-600">{stats.alerts.critical} critical</span>
-              <span className="text-gray-600">{stats.alerts.total} total</span>
+              <span className="text-red-600">{stats.alerts.critical || 0} critical</span>
+              <span className="text-gray-600">{stats.alerts.total || 0} total</span>
             </div>
           </div>
 
@@ -271,10 +271,10 @@ function Pipeline() {
               <h3 className="text-sm font-medium text-gray-700">System Health</h3>
               <Activity className="text-gray-400" size={20} />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{stats.heartbeats.agents_reporting}</div>
+            <div className="text-2xl font-bold text-gray-900">{stats.heartbeats.agents_reporting || 0}</div>
             <div className="flex items-center gap-3 mt-2 text-xs">
               <span className="text-gray-600">reporting</span>
-              {stats.heartbeats.avg_cpu !== null && stats.heartbeats.avg_cpu !== undefined && (
+              {stats.heartbeats.avg_cpu !== null && stats.heartbeats.avg_cpu !== undefined && typeof stats.heartbeats.avg_cpu === 'number' && (
                 <span className="text-blue-600">
                   {stats.heartbeats.avg_cpu.toFixed(1)}% CPU
                 </span>
