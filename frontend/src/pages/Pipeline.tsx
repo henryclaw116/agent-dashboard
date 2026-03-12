@@ -88,8 +88,8 @@ interface Stats {
   };
   heartbeats: {
     agents_reporting: number;
-    avg_cpu: number;
-    avg_memory: number;
+    avg_cpu: number | null;
+    avg_memory: number | null;
   };
 }
 
@@ -115,7 +115,39 @@ function Pipeline() {
       setAgents(agentsRes.data.agents || []);
       setTasks(tasksRes.data.tasks || []);
       setAlerts(alertsRes.data.alerts || []);
-      setStats(statsRes.data.stats || null);
+      
+      // Parse stats to ensure all values are numbers (handle both string and number responses)
+      const rawStats = statsRes.data.stats;
+      if (rawStats) {
+        const parsedStats = {
+          agents: {
+            total: parseInt(String(rawStats.agents.total)) || 0,
+            active: parseInt(String(rawStats.agents.active)) || 0,
+            offline: parseInt(String(rawStats.agents.offline)) || 0,
+            paused: parseInt(String(rawStats.agents.paused)) || 0
+          },
+          tasks: {
+            total: parseInt(String(rawStats.tasks.total)) || 0,
+            pending: parseInt(String(rawStats.tasks.pending)) || 0,
+            in_progress: parseInt(String(rawStats.tasks.in_progress)) || 0,
+            completed: parseInt(String(rawStats.tasks.completed)) || 0,
+            failed: parseInt(String(rawStats.tasks.failed)) || 0
+          },
+          alerts: {
+            total: parseInt(String(rawStats.alerts.total)) || 0,
+            new: parseInt(String(rawStats.alerts.new)) || 0,
+            critical: parseInt(String(rawStats.alerts.critical)) || 0
+          },
+          heartbeats: {
+            agents_reporting: parseInt(String(rawStats.heartbeats.agents_reporting)) || 0,
+            avg_cpu: rawStats.heartbeats.avg_cpu ? parseFloat(String(rawStats.heartbeats.avg_cpu)) : null,
+            avg_memory: rawStats.heartbeats.avg_memory ? parseFloat(String(rawStats.heartbeats.avg_memory)) : null
+          }
+        };
+        setStats(parsedStats);
+      } else {
+        setStats(null);
+      }
     } catch (error: any) {
       console.error('Failed to load pipeline data:', error);
       // Set empty defaults on error
