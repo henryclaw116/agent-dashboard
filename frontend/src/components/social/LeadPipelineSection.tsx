@@ -305,7 +305,7 @@ function LeadPipelineSection() {
     if (selectedLead) {
       try {
         await api.patch(`/social-leads/${selectedLead.id}`, {
-          landing_url: newUrl
+          stage3_landing_url: newUrl
         });
       } catch (error) {
         console.error('Failed to update landing page:', error);
