@@ -214,6 +214,38 @@ function LeadPipelineSection() {
     }
   };
 
+  const handleReopen = async () => {
+    if (!selectedLead) return;
+    
+    if (!confirm('Reopen this lead? It will be moved back to active pipeline.')) return;
+    
+    try {
+      setSaving(true);
+      
+      // Change status from REJECTED back to PENDING
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        status: 'PENDING',
+        approved_at: null,
+        sent_at: null,
+        reply_url: null
+      });
+      
+      // Remove from archive list
+      setLeads(prevLeads => prevLeads.filter(lead => lead.id !== selectedLead.id));
+      
+      alert('✅ Lead reopened! You can now find it in the Active pipeline.');
+      setSelectedLead(null);
+      
+      // Switch to Active view to show the reopened lead
+      setShowArchive(false);
+    } catch (error) {
+      console.error('Failed to reopen lead:', error);
+      alert('Failed to reopen lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveReply = async () => {
     if (!selectedLead) return;
     
@@ -390,6 +422,43 @@ function LeadPipelineSection() {
     }
   };
 
+  // Bulk reopen
+  const bulkReopen = async () => {
+    if (selectedLeadIds.length === 0) return;
+    
+    if (!confirm(`Reopen ${selectedLeadIds.length} selected leads? They will be moved back to active pipeline.`)) return;
+    
+    try {
+      setBulkProcessing(true);
+      
+      // Reopen all selected leads
+      await Promise.all(
+        selectedLeadIds.map(id => 
+          api.patch(`/social-leads/${id}`, {
+            status: 'PENDING',
+            approved_at: null,
+            sent_at: null,
+            reply_url: null
+          })
+        )
+      );
+      
+      // Remove from archive list
+      setLeads(prevLeads => prevLeads.filter(lead => !selectedLeadIds.includes(lead.id)));
+      setSelectedLeadIds([]);
+      
+      alert(`✅ ${selectedLeadIds.length} leads reopened! Switching to Active view...`);
+      
+      // Switch to Active view
+      setShowArchive(false);
+    } catch (error) {
+      console.error('Failed to bulk reopen:', error);
+      alert('Failed to reopen some leads');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Pipeline Stats */}
@@ -477,20 +546,34 @@ function LeadPipelineSection() {
               >
                 Clear
               </button>
-              <button
-                onClick={bulkReject}
-                disabled={bulkProcessing}
-                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
-              >
-                {bulkProcessing ? 'Processing...' : 'Bulk Reject'}
-              </button>
-              <button
-                onClick={bulkAutoSend}
-                disabled={bulkProcessing}
-                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
-              >
-                {bulkProcessing ? 'Processing...' : 'Bulk Auto-Send'}
-              </button>
+              {showArchive ? (
+                // Archive view - show Bulk Reopen
+                <button
+                  onClick={bulkReopen}
+                  disabled={bulkProcessing}
+                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {bulkProcessing ? '⏳ Processing...' : '🔄 Bulk Reopen'}
+                </button>
+              ) : (
+                // Active view - show Bulk Reject and Bulk Auto-Send
+                <>
+                  <button
+                    onClick={bulkReject}
+                    disabled={bulkProcessing}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {bulkProcessing ? 'Processing...' : 'Bulk Reject'}
+                  </button>
+                  <button
+                    onClick={bulkAutoSend}
+                    disabled={bulkProcessing}
+                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {bulkProcessing ? 'Processing...' : 'Bulk Auto-Send'}
+                  </button>
+                </>
+              )}
             </div>
           )}
           
@@ -910,34 +993,56 @@ function LeadPipelineSection() {
 
             {/* Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
-              <button
-                onClick={handleReject}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Rejecting...' : 'Reject'}
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedLead(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handleCopyToClipboard}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
-                >
-                  📋 Copy to Clipboard
-                </button>
-                <button
-                  onClick={handleAutoSend}
-                  disabled={saving}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {saving ? '⏳ Sending...' : '🚀 Auto-Send'}
-                </button>
-              </div>
+              {selectedLead.status === 'REJECTED' ? (
+                // Archived Lead Footer - Show Reopen button
+                <>
+                  <button
+                    onClick={handleReopen}
+                    disabled={saving}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {saving ? '⏳ Reopening...' : '🔄 Reopen Lead'}
+                  </button>
+                  <button
+                    onClick={() => setSelectedLead(null)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : (
+                // Active Lead Footer - Show normal actions
+                <>
+                  <button
+                    onClick={handleReject}
+                    disabled={saving}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Rejecting...' : 'Reject'}
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedLead(null)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={handleCopyToClipboard}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      📋 Copy to Clipboard
+                    </button>
+                    <button
+                      onClick={handleAutoSend}
+                      disabled={saving}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {saving ? '⏳ Sending...' : '🚀 Auto-Send'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
