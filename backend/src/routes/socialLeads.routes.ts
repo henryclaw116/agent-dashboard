@@ -331,8 +331,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
       UPDATE social_leads
       SET 
         stage4_reply_text = COALESCE($1, stage4_reply_text),
-        status = 'APPROVED',
-        approved_at = NOW()
+        status = 'APPROVED'
       WHERE id = $2
       RETURNING *
     `, [approved_response, id]);
