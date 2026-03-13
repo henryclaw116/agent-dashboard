@@ -410,8 +410,8 @@ Generate improved routing rules that fix these issues. Be specific about pain po
       writer_prompt: row.writer_prompt,
       scorer_guidelines: row.scorer_guidelines,
       router_rules: row.router_rules,
-      reply_lessons: JSON.parse(row.reply_lessons_json || '[]'),
-      quality_lessons: JSON.parse(row.quality_lessons_json || '[]'),
+      reply_lessons: typeof row.reply_lessons_json === 'string' ? JSON.parse(row.reply_lessons_json) : (row.reply_lessons_json || []),
+      quality_lessons: typeof row.quality_lessons_json === 'string' ? JSON.parse(row.quality_lessons_json) : (row.quality_lessons_json || []),
       training_date: row.training_date,
       created_at: row.created_at
     }));
@@ -437,3 +437,4 @@ Generate improved routing rules that fix these issues. Be specific about pain po
 }
 
 export const agentTrainingService = new AgentTrainingService();
+
