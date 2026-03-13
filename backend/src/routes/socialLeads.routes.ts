@@ -66,12 +66,21 @@ router.get('/', async (req: Request, res: Response) => {
       min_score,     // Minimum lead_score
       platform,      // Filter by platform
       limit = 50,    // Results per page
-      offset = 0     // Pagination offset
+      offset = 0,    // Pagination offset
+      timeRange = 'all'  // Time filter: daily, weekly, or all
     } = req.query;
 
     let query = 'SELECT * FROM social_leads WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
+
+    // Time range filtering
+    if (timeRange === 'daily') {
+      query += " AND created_at >= NOW() - INTERVAL '24 hours'";
+    } else if (timeRange === 'weekly') {
+      query += " AND created_at >= NOW() - INTERVAL '7 days'";
+    }
+    // 'all' = no time filter
 
     // Stage filtering
     if (stage && stage !== 'all') {
@@ -118,6 +127,13 @@ router.get('/', async (req: Request, res: Response) => {
     // Get stats for the current filter
     let countQuery = 'SELECT COUNT(*) FROM social_leads WHERE 1=1';
     const countParams: any[] = [];
+
+    // Apply time filter to count
+    if (timeRange === 'daily') {
+      countQuery += " AND created_at >= NOW() - INTERVAL '24 hours'";
+    } else if (timeRange === 'weekly') {
+      countQuery += " AND created_at >= NOW() - INTERVAL '7 days'";
+    }
 
     // Apply same stage filter for count
     if (stage && stage !== 'all') {
@@ -189,6 +205,17 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/social-leads/stats - Get summary statistics
 router.get('/stats', async (req: Request, res: Response) => {
   try {
+    const { timeRange = 'all' } = req.query;
+    
+    // Build time filter
+    let timeFilter = '';
+    if (timeRange === 'daily') {
+      timeFilter = "AND created_at >= NOW() - INTERVAL '24 hours'";
+    } else if (timeRange === 'weekly') {
+      timeFilter = "AND created_at >= NOW() - INTERVAL '7 days'";
+    }
+    // 'all' = no time filter
+    
     // Get stage counts
     const stageResult = await pool.query(`
       SELECT
@@ -200,6 +227,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
         COUNT(*) as total
       FROM social_leads
+      WHERE 1=1 ${timeFilter}
     `);
 
     // Get additional stats
@@ -210,6 +238,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         ROUND(AVG(stage2_score)) as avg_score,
         COUNT(DISTINCT platform) as platforms_monitored
       FROM social_leads
+      WHERE 1=1 ${timeFilter}
     `);
 
     // Parse all stats as integers

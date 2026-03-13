@@ -60,13 +60,14 @@ function LeadPipelineSection() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [timeRange, setTimeRange] = useState<'daily' | 'weekly' | 'all'>('all');
 
   useEffect(() => {
     loadLeads();
     setSelectedLeadIds([]); // Clear selections when stage changes
     const interval = setInterval(loadLeads, 10000); // Refresh every 10s
     return () => clearInterval(interval);
-  }, [selectedStage]);
+  }, [selectedStage, timeRange]);
 
   useEffect(() => {
     setSelectedLeadIds([]); // Clear selections when switching between Active/Archive
@@ -74,8 +75,8 @@ function LeadPipelineSection() {
 
   const loadLeads = async () => {
     try {
-      console.log('Loading leads for stage:', selectedStage);
-      const response = await api.get(`/social-leads?stage=${selectedStage}`);
+      console.log('Loading leads for stage:', selectedStage, 'timeRange:', timeRange);
+      const response = await api.get(`/social-leads?stage=${selectedStage}&timeRange=${timeRange}`);
       console.log('Response:', response.data);
       setLeads(response.data.leads || []);
       setStats(response.data.stats || null);
@@ -492,6 +493,46 @@ function LeadPipelineSection() {
 
   return (
     <div className="space-y-6">
+      {/* Time Range Toggle */}
+      <div className="flex items-center justify-between bg-white rounded-lg shadow p-4 border border-gray-200">
+        <div className="flex items-center gap-2">
+          <Clock size={20} className="text-gray-600" />
+          <span className="text-sm font-medium text-gray-700">Time Range:</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTimeRange('daily')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              timeRange === 'daily'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Daily (24h)
+          </button>
+          <button
+            onClick={() => setTimeRange('weekly')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              timeRange === 'weekly'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Weekly (7d)
+          </button>
+          <button
+            onClick={() => setTimeRange('all')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              timeRange === 'all'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
       {/* Pipeline Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {STAGES.map(stage => {
