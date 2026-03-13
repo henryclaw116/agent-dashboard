@@ -345,6 +345,93 @@ function LeadPipelineSection() {
     }
   };
 
+  
+  const promoteToScorer = async () => {
+    if (!selectedLead) return;
+    
+    if (!confirm('Approve this lead for scoring?
+
+This will mark it as KEEP and send to the Scorer agent.')) {
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        stage1_status: 'KEEP'
+      });
+      
+      alert('✅ Lead approved! Sent to Scorer agent.');
+      setSelectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to promote lead:', error);
+      alert('Failed to promote lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const promoteToRouter = async () => {
+    if (!selectedLead) return;
+    
+    const score = prompt('Enter lead score (0-100):', '75');
+    if (!score) return;
+    
+    const category = prompt('Enter pain category (complexity/time/confidence/cost):', 'complexity');
+    if (!category) return;
+    
+    try {
+      setSaving(true);
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        stage2_score: parseInt(score),
+        stage2_pain_category: category,
+        stage2_pain_summary: 'Manually scored by Tony'
+      });
+      
+      alert('✅ Lead scored! Sent to Router agent.');
+      setSelectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to promote lead:', error);
+      alert('Failed to promote lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const promoteToWriter = async () => {
+    if (!selectedLead) return;
+    
+    if (!selectedLandingPage) {
+      alert('Please select a landing page first');
+      return;
+    }
+    
+    if (!confirm(`Send to Writer agent?
+
+Landing page: ${selectedLandingPage}`)) {
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      await api.patch(`/social-leads/${selectedLead.id}`, {
+        stage3_landing_url: selectedLandingPage,
+        stage3_reasoning: 'Landing page selected by Tony'
+      });
+      
+      alert('✅ Landing page assigned! Sent to Writer agent.');
+      setSelectedLead(null);
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to promote lead:', error);
+      alert('Failed to promote lead');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openLeadDetails = (lead: PipelineLead) => {
     setSelectedLead(lead);
     setEditedReply(lead.stage4_reply_text || '');
@@ -1151,8 +1238,54 @@ function LeadPipelineSection() {
               ) : (
                 // Active Lead Footer - Show normal actions
                 <>
-                  <button
-                    onClick={handleReject}
+                  
+              {/* Stage Promotion Buttons */}
+              {!showArchive && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2">? Manual Stage Promotion</h3>
+                  <p className="text-xs text-blue-700 mb-3">Manually push this lead forward through the pipeline</p>
+                  
+                  <div className="flex gap-2 flex-wrap">
+                    {/* Scanner → Scorer */}
+                    {!selectedLead.stage2_score && (
+                      <button
+                        onClick={promoteToScorer}
+                        disabled={saving}
+                        className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm flex items-center gap-2"
+                        title="Mark as KEEP and send to Scorer agent"
+                      >
+                        ? Approve for Scoring
+                      </button>
+                    )}
+                    
+                    {/* Scorer → Router */}
+                    {selectedLead.stage2_score && !selectedLead.stage3_landing_url && (
+                      <button
+                        onClick={promoteToRouter}
+                        disabled={saving}
+                        className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 text-sm flex items-center gap-2"
+                        title="Manually score this lead and send to Router"
+                      >
+                        ? Score & Send to Router
+                      </button>
+                    )}
+                    
+                    {/* Router → Writer */}
+                    {selectedLead.stage3_landing_url && !selectedLead.stage4_reply_text && (
+                      <button
+                        onClick={promoteToWriter}
+                        disabled={saving || !selectedLandingPage}
+                        className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm flex items-center gap-2"
+                        title="Confirm landing page and send to Writer"
+                      >
+                        ? Send to Writer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={handleReject}
                     disabled={saving}
                     className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
