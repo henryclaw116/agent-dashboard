@@ -100,7 +100,7 @@ app.use('/api/social-leads', socialLeadsRoutes);
 app.use('/api/bitly-analytics', createBitlyAnalyticsRouter(db));
 app.use('/api/orchestration', orchestrationRoutes);
 app.use('/api/relationships', relationshipsRoutes);
-app.use('/api/agent-training', agentTrainingRoutes);
+app.use('/api/agent-training', agentTrainingRoutes); // Training routes registered
 
 // 404 handler
 app.use((req, res) => {
