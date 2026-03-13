@@ -31,7 +31,8 @@ const STAGES = [
   { id: 'router', name: 'Router', icon: Zap, color: 'yellow' },
   { id: 'writer', name: 'Writer', icon: CheckCircle, color: 'green' },
   { id: 'dedup', name: 'Dedup', icon: AlertCircle, color: 'orange' },
-  { id: 'tracker', name: 'Tracker', icon: LinkIcon, color: 'pink' }
+  { id: 'tracker', name: 'Tracker', icon: LinkIcon, color: 'pink' },
+  { id: 'sent', name: 'Sent', icon: CheckCircle, color: 'green' }
 ];
 
 const LANDING_PAGES = [
@@ -90,7 +91,8 @@ function LeadPipelineSection() {
         router: 0,
         writer: 0,
         dedup: 0,
-        tracker: 0
+        tracker: 0,
+        sent: 0
       });
     } finally {
       setLoading(false);
@@ -1188,3 +1190,5 @@ function LeadPipelineSection() {
 }
 
 export default LeadPipelineSection;
+
+

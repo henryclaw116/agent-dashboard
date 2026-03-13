@@ -170,7 +170,8 @@ router.get('/', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage3_landing_url IS NOT NULL) as router,
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
         COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
-        COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker
+        COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
+        COUNT(*) FILTER (WHERE status = 'SENT') as sent
       FROM social_leads
     `);
 
@@ -225,6 +226,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
         COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
         COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
+        COUNT(*) FILTER (WHERE status = 'SENT') as sent,
         COUNT(*) as total
       FROM social_leads
       WHERE 1=1 ${timeFilter}
@@ -254,6 +256,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         writer: parseInt(stageStats.writer) || 0,
         dedup: parseInt(stageStats.dedup) || 0,
         tracker: parseInt(stageStats.tracker) || 0,
+        sent: parseInt(stageStats.sent) || 0,
         total: parseInt(stageStats.total) || 0,
         awaiting_approval: parseInt(additionalStats.awaiting_approval) || 0,
         sent: parseInt(additionalStats.sent) || 0,
@@ -631,3 +634,5 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
