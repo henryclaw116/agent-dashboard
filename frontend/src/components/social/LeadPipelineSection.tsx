@@ -349,9 +349,7 @@ function LeadPipelineSection() {
   const promoteToScorer = async () => {
     if (!selectedLead) return;
     
-    if (!confirm('Approve this lead for scoring?
-
-This will mark it as KEEP and send to the Scorer agent.')) {
+    if (!confirm('Approve this lead for scoring?\\n\\nThis will mark it as KEEP and send to the Scorer agent.')) {
       return;
     }
     
@@ -1323,5 +1321,6 @@ Landing page: ${selectedLandingPage}`)) {
 }
 
 export default LeadPipelineSection;
+
 
 
