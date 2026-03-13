@@ -186,7 +186,9 @@ function Pipeline() {
         position_y: position.y,
         parent_agent_id: parentId
       });
-    } catch (error) {
+      
+      // Refresh to show updated position
+      await loadData();} catch (error) {
       console.error('Failed to update agent position:', error);
     }
   };
@@ -394,3 +396,4 @@ function Pipeline() {
 }
 
 export default Pipeline;
+

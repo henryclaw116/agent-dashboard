@@ -678,7 +678,15 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {getStatusIcon(agent.status)}
-                      <h3 className="font-semibold text-gray-900 text-sm">{agent.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 text-sm">{agent.name}</h3>
+                        <span 
+                          className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-medium" 
+                          title={`Authority Level ${Math.round((600 - position.y) / 10)} - Lower Y position = Higher authority`}
+                        >
+                          L{Math.round((600 - position.y) / 10)}
+                        </span>
+                      </div>
                     </div>
                     {agent.description && (
                       <p className="text-xs text-gray-600 line-clamp-1">{agent.description}</p>
@@ -814,8 +822,7 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
           existingRelationship={editingRelationship}
           onClose={() => {
             setShowRelationshipModal(false);
-            setConnectionMode(false);
-            setConnectingFrom(null);
+            // Keep connection mode active and source selected for multiple connections
             setConnectingTo(null);
             setEditingRelationship(null);
           }}
@@ -828,6 +835,11 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
                 relationship: relationshipData
               });
             }
+            
+            // Keep connection mode and source agent - reset only target for multiple connections
+            setShowRelationshipModal(false);
+            setConnectingTo(null);
+            setEditingRelationship(null);
             loadRelationships();
           }}
           onDeleted={() => {
@@ -840,3 +852,4 @@ function AgentOrgChart({ agents, onAgentClick, onPositionUpdate, onControlAction
 }
 
 export default AgentOrgChart;
+
