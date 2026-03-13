@@ -82,3 +82,7 @@ export const workflowsApi = {
   reorderSteps: (workflowId: number, stepOrders: Array<{ id: number; step_order: number }>) => 
     api.put(`/workflows/${workflowId}/steps/reorder`, { stepOrders }),
 };
+
+export const orchestrationApi = {
+  restartAgent: (agentId: number) => api.post('/orchestration/agents/' + agentId + '/control', { action: 'restart' }),
+};
