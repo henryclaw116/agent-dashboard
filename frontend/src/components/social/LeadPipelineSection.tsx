@@ -55,6 +55,7 @@ function LeadPipelineSection() {
   const [selectedLandingPage, setSelectedLandingPage] = useState<string>('');
   const [trainingFeedback, setTrainingFeedback] = useState<string>('');
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -192,9 +193,12 @@ function LeadPipelineSection() {
       await api.post(`/social-leads/${selectedLead.id}/archive`, {
         reason: 'Rejected by Tony'
       });
-      alert('Lead rejected and archived.');
+      
+      // Immediately remove from current list
+      setLeads(prevLeads => prevLeads.filter(lead => lead.id !== selectedLead.id));
+      
+      alert('Lead archived successfully.');
       setSelectedLead(null);
-      loadLeads();
     } catch (error) {
       console.error('Failed to reject lead:', error);
       alert('Failed to reject lead');
@@ -307,6 +311,30 @@ function LeadPipelineSection() {
       {/* Filter Bar */}
       <div className="flex items-center justify-between bg-white rounded-lg shadow p-4 border border-gray-200">
         <div className="flex items-center gap-4">
+          {/* Active/Archive Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setShowArchive(false)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                !showArchive 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setShowArchive(true)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                showArchive 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Archive
+            </button>
+          </div>
+
           <select
             value={selectedStage}
             onChange={(e) => setSelectedStage(e.target.value)}
@@ -339,19 +367,33 @@ function LeadPipelineSection() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rlt-blue mx-auto mb-4"></div>
             <p className="text-gray-600">Loading pipeline...</p>
           </div>
-        ) : leads.length === 0 ? (
+        ) : leads.filter(lead => showArchive ? lead.status === 'REJECTED' : lead.status !== 'REJECTED').length === 0 ? (
           <div className="p-12 text-center text-gray-500">
             <Users size={48} className="mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Leads in Pipeline</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {showArchive ? 'No Archived Leads' : 'No Active Leads in Pipeline'}
+            </h3>
             <p className="text-sm">
-              {selectedStage === 'all'
+              {showArchive 
+                ? 'No leads have been archived yet.' 
+                : selectedStage === 'all'
                 ? 'The lead pipeline is empty. Agents will populate this as they process Brand24 alerts.'
                 : `No leads currently at ${STAGES.find(s => s.id === selectedStage)?.name} stage.`}
             </p>
           </div>
         ) : (
           <ul className="divide-y divide-gray-200">
-            {leads.map(lead => (
+            {leads
+              .filter(lead => {
+                // Show archived leads only when showArchive is true
+                if (showArchive) {
+                  return lead.status === 'REJECTED';
+                } else {
+                  // Show active leads (not rejected/archived)
+                  return lead.status !== 'REJECTED';
+                }
+              })
+              .map(lead => (
               <li key={lead.id} className="p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
