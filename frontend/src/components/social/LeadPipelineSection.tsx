@@ -56,12 +56,19 @@ function LeadPipelineSection() {
   const [trainingFeedback, setTrainingFeedback] = useState<string>('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   useEffect(() => {
     loadLeads();
+    setSelectedLeadIds([]); // Clear selections when stage changes
     const interval = setInterval(loadLeads, 10000); // Refresh every 10s
     return () => clearInterval(interval);
   }, [selectedStage]);
+
+  useEffect(() => {
+    setSelectedLeadIds([]); // Clear selections when switching between Active/Archive
+  }, [showArchive]);
 
   const loadLeads = async () => {
     try {
@@ -280,6 +287,109 @@ function LeadPipelineSection() {
     setIsEditing(false);
   };
 
+  // Bulk selection functions
+  const toggleLeadSelection = (leadId: number) => {
+    setSelectedLeadIds(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const selectAllLeads = () => {
+    const visibleLeads = leads.filter(lead => 
+      showArchive ? lead.status === 'REJECTED' : lead.status !== 'REJECTED'
+    );
+    setSelectedLeadIds(visibleLeads.map(lead => lead.id));
+  };
+
+  const deselectAllLeads = () => {
+    setSelectedLeadIds([]);
+  };
+
+  // Bulk reject
+  const bulkReject = async () => {
+    if (selectedLeadIds.length === 0) return;
+    
+    if (!confirm(`Reject ${selectedLeadIds.length} selected leads? This will archive them.`)) return;
+    
+    try {
+      setBulkProcessing(true);
+      
+      // Reject all selected leads
+      await Promise.all(
+        selectedLeadIds.map(id => 
+          api.post(`/social-leads/${id}/archive`, { reason: 'Bulk rejected by Tony' })
+        )
+      );
+      
+      // Remove from current list
+      setLeads(prevLeads => prevLeads.filter(lead => !selectedLeadIds.includes(lead.id)));
+      setSelectedLeadIds([]);
+      
+      alert(`${selectedLeadIds.length} leads archived successfully.`);
+    } catch (error) {
+      console.error('Failed to bulk reject:', error);
+      alert('Failed to reject some leads');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  // Bulk auto-send
+  const bulkAutoSend = async () => {
+    if (selectedLeadIds.length === 0) return;
+    
+    if (!confirm(`Auto-send ${selectedLeadIds.length} selected leads?`)) return;
+    
+    try {
+      setBulkProcessing(true);
+      
+      // Auto-send all selected leads
+      const results = await Promise.allSettled(
+        selectedLeadIds.map(async id => {
+          const lead = leads.find(l => l.id === id);
+          if (!lead) return;
+          
+          const finalReply = (lead.stage4_reply_text || '')
+            .replace('[LINK]', lead.stage3_landing_url || '');
+          
+          await api.post(`/social-leads/${id}/approve`, {
+            approved_response: finalReply,
+            reviewed_by: 'Tony',
+            auto_send: true
+          });
+          
+          await api.patch(`/social-leads/${id}`, {
+            status: 'SENT',
+            sent_at: new Date().toISOString(),
+            reply_url: lead.post_url
+          });
+        })
+      );
+      
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      
+      // Remove from current list
+      setLeads(prevLeads => prevLeads.filter(lead => !selectedLeadIds.includes(lead.id)));
+      setSelectedLeadIds([]);
+      
+      if (failed > 0) {
+        alert(`${succeeded} leads sent, ${failed} failed.`);
+      } else {
+        alert(`${succeeded} leads approved and sent!`);
+      }
+      
+      loadLeads();
+    } catch (error) {
+      console.error('Failed to bulk auto-send:', error);
+      alert('Failed to send some leads');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Pipeline Stats */}
@@ -354,14 +464,69 @@ function LeadPipelineSection() {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock size={14} />
-          <span>Auto-refresh: 10s</span>
+        <div className="flex items-center gap-4">
+          {/* Selection controls */}
+          {selectedLeadIds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">
+                {selectedLeadIds.length} selected
+              </span>
+              <button
+                onClick={deselectAllLeads}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                Clear
+              </button>
+              <button
+                onClick={bulkReject}
+                disabled={bulkProcessing}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
+              >
+                {bulkProcessing ? 'Processing...' : 'Bulk Reject'}
+              </button>
+              <button
+                onClick={bulkAutoSend}
+                disabled={bulkProcessing}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+              >
+                {bulkProcessing ? 'Processing...' : 'Bulk Auto-Send'}
+              </button>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Clock size={14} />
+            <span>Auto-refresh: 10s</span>
+          </div>
         </div>
       </div>
 
       {/* Leads List */}
       <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+        {/* Select All Header */}
+        {!loading && leads.filter(lead => showArchive ? lead.status === 'REJECTED' : lead.status !== 'REJECTED').length > 0 && (
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={
+                selectedLeadIds.length > 0 &&
+                selectedLeadIds.length === leads.filter(lead => showArchive ? lead.status === 'REJECTED' : lead.status !== 'REJECTED').length
+              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  selectAllLeads();
+                } else {
+                  deselectAllLeads();
+                }
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Select All ({leads.filter(lead => showArchive ? lead.status === 'REJECTED' : lead.status !== 'REJECTED').length})
+            </span>
+          </div>
+        )}
+        
         {loading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rlt-blue mx-auto mb-4"></div>
@@ -395,7 +560,15 @@ function LeadPipelineSection() {
               })
               .map(lead => (
               <li key={lead.id} className="p-4 hover:bg-gray-50">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  {/* Checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={selectedLeadIds.includes(lead.id)}
+                    onChange={() => toggleLeadSelection(lead.id)}
+                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  
                   <div className="flex-1">
                     {/* User & Platform */}
                     <div className="flex items-center gap-2 mb-2">
