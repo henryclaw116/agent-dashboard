@@ -34,6 +34,8 @@ import socialLeadsRoutes from './routes/socialLeads.routes';
 import orchestrationRoutes from './routes/orchestration.routes';
 import relationshipsRoutes from './routes/relationships.routes';
 import { createBitlyAnalyticsRouter } from './routes/bitly-analytics.routes';
+import agentTrainingRoutes from './routes/agentTraining.routes';
+import { startWeeklyTrainingJob } from './jobs/weeklyTrainingJob';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -98,6 +100,7 @@ app.use('/api/social-leads', socialLeadsRoutes);
 app.use('/api/bitly-analytics', createBitlyAnalyticsRouter(db));
 app.use('/api/orchestration', orchestrationRoutes);
 app.use('/api/relationships', relationshipsRoutes);
+app.use('/api/agent-training', agentTrainingRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -165,6 +168,9 @@ async function startServer() {
     };
 
     console.log(`🔌 WebSocket server running on port ${WS_PORT}`);
+
+    // Start weekly agent training job
+    startWeeklyTrainingJob();
 
     // Graceful shutdown
     process.on('SIGTERM', () => {

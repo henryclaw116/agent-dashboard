@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, AlertCircle, Activity, Image, Users, DollarSign, GitBranch, Building2 } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, AlertCircle, Activity, Image, Users, DollarSign, GitBranch, Building2, Brain } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -14,6 +14,7 @@ function Layout({ children }: LayoutProps) {
     { path: '/projects', icon: FolderKanban, label: 'Projects' },
     { path: '/pipeline', icon: GitBranch, label: 'Pipeline' },
     { path: '/office', icon: Building2, label: 'Office View' },
+    { path: '/training', icon: Brain, label: 'Agent Training' },
     { path: '/team', icon: Users, label: 'Team' },
     { path: '/financials', icon: DollarSign, label: 'Financials' },
     { path: '/blockers', icon: AlertCircle, label: 'Blockers' },

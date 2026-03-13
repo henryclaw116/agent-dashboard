@@ -10,6 +10,7 @@ import Team from './pages/Team';
 import Financials from './pages/Financials';
 import Pipeline from './pages/Pipeline';
 import OfficeView from './pages/OfficeView';
+import AgentTraining from './pages/AgentTraining';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/financials" element={<Financials />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/office" element={<OfficeView />} />
+          <Route path="/training" element={<AgentTraining />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
