@@ -942,6 +942,39 @@ function LeadPipelineSection() {
                 </div>
               )}
 
+              {/* Reply Training - Train Writer Agent */}
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  ✍️ Train Reply Writing (Writer Agent)
+                </h3>
+                <p className="text-xs text-gray-600 mb-3">
+                  Tell the AI what it got right or wrong <strong>about the reply message</strong>. Be specific about tone, length, or content issues. The AI will regenerate the reply based on your feedback.
+                </p>
+                <textarea
+                  value={trainingFeedback}
+                  onChange={(e) => setTrainingFeedback(e.target.value)}
+                  placeholder="Example: 'Too formal. Make it more casual and friendly. Don't mention free trial in first message - just focus on the problem. Shorten to 3 sentences.'"
+                  className="w-full px-3 py-2 border border-yellow-300 rounded focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
+                  rows={3}
+                />
+                <button
+                  onClick={handleRegenerateReply}
+                  disabled={isRegenerating || !trainingFeedback.trim()}
+                  className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Regenerating Reply...
+                    </>
+                  ) : (
+                    <>
+                      ✨ Regenerate Reply with Feedback
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Lead Quality Training - Train Scoring/Routing Agents */}
               <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -973,39 +1006,6 @@ function LeadPipelineSection() {
                   ) : (
                     <>
                       📚 Submit Lead Quality Training
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Reply Training - Train Writer Agent */}
-              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  ✍️ Train Reply Writing (Writer Agent)
-                </h3>
-                <p className="text-xs text-gray-600 mb-3">
-                  Tell the AI what it got right or wrong <strong>about the reply message</strong>. Be specific about tone, length, or content issues. The AI will regenerate the reply based on your feedback.
-                </p>
-                <textarea
-                  value={trainingFeedback}
-                  onChange={(e) => setTrainingFeedback(e.target.value)}
-                  placeholder="Example: 'Too formal. Make it more casual and friendly. Don't mention free trial in first message - just focus on the problem. Shorten to 3 sentences.'"
-                  className="w-full px-3 py-2 border border-yellow-300 rounded focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm"
-                  rows={3}
-                />
-                <button
-                  onClick={handleRegenerateReply}
-                  disabled={isRegenerating || !trainingFeedback.trim()}
-                  className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-                >
-                  {isRegenerating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Regenerating Reply...
-                    </>
-                  ) : (
-                    <>
-                      ✨ Regenerate Reply with Feedback
                     </>
                   )}
                 </button>
