@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import OpenAI from 'openai';
+import { autoPostingService } from '../services/autoPosting.service';
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -340,13 +341,46 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Lead not found' });
     }
 
-    // TODO: If auto_send is true, trigger actual posting to platform
-    // This would call the social-pipeline posting agent
-    // For now, just mark as approved and ready
+    // If auto_send is true, trigger actual posting to platform
+    if (auto_send) {
+      console.log(`🚀 Auto-send triggered for lead #${id}`);
+      
+      // Trigger posting in background (don't wait for completion)
+      autoPostingService.postLead(parseInt(id))
+        .then(postResult => {
+          if (postResult.success) {
+            // Update with sent status
+            pool.query(`
+              UPDATE social_leads
+              SET 
+                status = 'SENT',
+                sent_at = NOW(),
+                reply_url = $1,
+                reply_screenshot_url = $2
+              WHERE id = $3
+            `, [postResult.reply_url, postResult.screenshot_url, id]);
+            
+            console.log(`✅ Lead #${id} posted successfully`);
+          } else {
+            // Mark as failed
+            pool.query(`
+              UPDATE social_leads
+              SET status = 'FAILED'
+              WHERE id = $1
+            `, [id]);
+            
+            console.error(`❌ Lead #${id} posting failed: ${postResult.error}`);
+          }
+        })
+        .catch(error => {
+          console.error(`❌ Lead #${id} posting error:`, error);
+          pool.query(`UPDATE social_leads SET status = 'FAILED' WHERE id = $1`, [id]);
+        });
+    }
 
     res.json({ 
       success: true, 
-      message: auto_send ? 'Response approved and queued for auto-send' : 'Response approved and ready for posting',
+      message: auto_send ? 'Response approved and posting now!' : 'Response approved and ready for posting',
       lead: result.rows[0] 
     });
   } catch (error: any) {
