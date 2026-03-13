@@ -5,9 +5,12 @@ interface Agent {
   id: number;
   name: string;
   status: string;
+  role?: string;
   current_task?: string;
   last_heartbeat?: string;
-  health_score: number;
+  health_score?: number;
+  cpu_usage?: string;
+  memory_usage_mb?: number;
 }
 
 interface Activity {
@@ -96,33 +99,74 @@ const OfficeView: React.FC = () => {
 
   // Get agent sprite based on status
   const getAgentSprite = (agent: Agent) => {
-    if (agent.status === 'error') return AGENT_SPRITES.error;
-    if (!agent.current_task) return AGENT_SPRITES.idle;
+    // Error status
+    if (agent.status === 'error' || agent.status === 'failed') return AGENT_SPRITES.error;
     
-    const task = agent.current_task.toLowerCase();
-    if (task.includes('scan')) return AGENT_SPRITES.scanning;
-    if (task.includes('writ')) return AGENT_SPRITES.writing;
-    if (task.includes('analyz')) return AGENT_SPRITES.analyzing;
-    if (task.includes('talk') || task.includes('message')) return AGENT_SPRITES.talking;
+    // Paused/idle
+    if (agent.status === 'paused' || agent.status === 'idle') return AGENT_SPRITES.idle;
     
-    return AGENT_SPRITES.working;
+    // Use agent name to determine sprite based on their role
+    const name = agent.name.toLowerCase();
+    if (name.includes('scanner') || name.includes('monitor')) return AGENT_SPRITES.scanning;
+    if (name.includes('writer')) return AGENT_SPRITES.writing;
+    if (name.includes('scorer') || name.includes('analytics')) return AGENT_SPRITES.analyzing;
+    if (name.includes('operations') || name.includes('marketing')) return AGENT_SPRITES.thinking;
+    
+    // Active status = working
+    if (agent.status === 'active' || agent.status === 'busy') return AGENT_SPRITES.working;
+    
+    return AGENT_SPRITES.idle;
   };
 
-  // Get 2-word task summary
+  // Get 2-word task summary based on agent name and status
   const getTaskSummary = (agent: Agent) => {
-    if (!agent.current_task) return 'Idle';
+    // Paused agents
+    if (agent.status === 'paused') return 'Paused';
+    if (agent.status === 'error' || agent.status === 'failed') return 'Error';
     
-    const task = agent.current_task.toLowerCase();
-    if (task.includes('scan')) return 'Scanning Posts';
-    if (task.includes('score')) return 'Scoring Leads';
-    if (task.includes('route')) return 'Routing Leads';
-    if (task.includes('writ')) return 'Writing Replies';
-    if (task.includes('dedup')) return 'Checking Duplicates';
-    if (task.includes('track')) return 'Creating Links';
-    if (task.includes('monitor')) return 'Monitoring Pipeline';
-    if (task.includes('post')) return 'Posting Replies';
+    // Use agent name/role to determine task
+    const name = agent.name.toLowerCase();
+    const role = (agent as any).role?.toLowerCase() || '';
     
-    return 'Working...';
+    if (name.includes('scanner')) return 'Scanning Posts';
+    if (name.includes('scorer')) return 'Scoring Leads';
+    if (name.includes('router')) return 'Routing Leads';
+    if (name.includes('writer')) return 'Writing Replies';
+    if (name.includes('dedup')) return 'Checking Duplicates';
+    if (name.includes('tracker')) return 'Creating Links';
+    if (name.includes('monitor') || name.includes('pipeline')) return 'Monitoring Pipeline';
+    if (name.includes('marketing')) return 'Managing Tasks';
+    if (name.includes('operations')) return 'Supervising Team';
+    if (name.includes('sales')) return 'Processing Leads';
+    if (name.includes('support')) return 'Helping Users';
+    if (name.includes('analytics')) return 'Analyzing Data';
+    if (name.includes('instagram')) return 'Messaging Followers';
+    
+    // Default based on status
+    if (agent.status === 'active' || agent.status === 'busy') return 'Working...';
+    return 'Idle';
+  };
+
+  // Calculate health score from agent data
+  const getHealthScore = (agent: Agent): number => {
+    // If health_score exists, use it
+    if (agent.health_score) return agent.health_score;
+    
+    // Calculate from status and activity
+    if (agent.status === 'error' || agent.status === 'failed') return 20;
+    if (agent.status === 'paused') return 50;
+    if (!agent.last_heartbeat) return 50;
+    
+    // Check how recent the last heartbeat was
+    const lastHeartbeat = new Date(agent.last_heartbeat).getTime();
+    const now = Date.now();
+    const minutesSinceHeartbeat = (now - lastHeartbeat) / (1000 * 60);
+    
+    // Healthy if heartbeat within 10 minutes
+    if (minutesSinceHeartbeat < 10) return 100;
+    if (minutesSinceHeartbeat < 30) return 80;
+    if (minutesSinceHeartbeat < 60) return 60;
+    return 40;
   };
 
   // Render office grid
@@ -298,13 +342,13 @@ const OfficeView: React.FC = () => {
                   <div className="w-full bg-gray-600 rounded-full h-1">
                     <div
                       className={`h-1 rounded-full ${
-                        agent.health_score > 80
+                        getHealthScore(agent) > 80
                           ? 'bg-green-500'
-                          : agent.health_score > 50
+                          : getHealthScore(agent) > 50
                           ? 'bg-yellow-500'
                           : 'bg-red-500'
                       }`}
-                      style={{ width: `${agent.health_score}%` }}
+                      style={{ width: `${getHealthScore(agent)}%` }}
                     />
                   </div>
                 </div>
