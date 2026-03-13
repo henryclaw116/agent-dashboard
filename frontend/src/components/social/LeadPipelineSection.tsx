@@ -913,6 +913,34 @@ function LeadPipelineSection() {
                       rows={6}
                     />
                   )}
+
+                  {/* Final Message Preview with actual link */}
+                  {(selectedLead.stage4_reply_text || editedReply) && (selectedLandingPage || selectedLead.stage3_landing_url) && (
+                    <div className="mt-4">
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                        👁️ Final Message Preview (what will actually be sent)
+                      </h4>
+                      <div className="bg-green-50 border border-green-300 rounded p-4">
+                        <p className="text-green-900 whitespace-pre-wrap text-sm">
+                          {(editedReply || selectedLead.stage4_reply_text || '')
+                            .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '')}
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-green-200">
+                          <p className="text-xs text-green-700">
+                            <strong>Link used:</strong>{' '}
+                            <a
+                              href={selectedLandingPage || selectedLead.stage3_landing_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline break-all"
+                            >
+                              {selectedLandingPage || selectedLead.stage3_landing_url}
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
