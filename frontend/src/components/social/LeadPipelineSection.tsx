@@ -227,7 +227,6 @@ function LeadPipelineSection() {
       // Change status from REJECTED back to PENDING
       await api.patch(`/social-leads/${selectedLead.id}`, {
         status: 'PENDING',
-        approved_at: null,
         sent_at: null,
         reply_url: null
       });
@@ -469,7 +468,6 @@ function LeadPipelineSection() {
         selectedLeadIds.map(id => 
           api.patch(`/social-leads/${id}`, {
             status: 'PENDING',
-            approved_at: null,
             sent_at: null,
             reply_url: null
           })
