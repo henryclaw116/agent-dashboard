@@ -208,6 +208,13 @@ function AgentForm({ agent, onSuccess, onCancel }: AgentFormProps) {
           <option value="openai/gpt-4o-mini">GPT-4o Mini (Cheaper)</option>
           <option value="google/gemini-flash-1.5">Gemini Flash 1.5 (Cheapest)</option>
           <option value="google/gemini-pro-1.5">Gemini Pro 1.5</option>
+            <option disabled>--- Local Models (Ollama) ---</option>
+            <option value="ollama/phi3:mini">Phi-3 Mini (Lightweight, fast)</option>
+            <option value="ollama/llama3.1:8b">Llama 3.1 8B (Best local quality)</option>
+            <option value="ollama/llama3.1:70b">Llama 3.1 70B (Highest quality)</option>
+            <option value="ollama/mistral:7b">Mistral 7B (Fast, efficient)</option>
+            <option value="ollama/codellama:13b">CodeLlama 13B (Code-focused)</option>
+            <option value="ollama/qwen2.5:7b">Qwen 2.5 7B (Multilingual)</option>
         </select>
         <p className="text-xs text-gray-500 mt-1">
           Affects cost and performance. Cheaper models work well for simple tasks.
