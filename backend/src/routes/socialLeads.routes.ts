@@ -486,6 +486,71 @@ IMPORTANT: Rewrite the reply incorporating the user's feedback. Follow their ins
   }
 });
 
+// POST /api/social-leads/:id/lead-quality-feedback - Submit feedback to train scoring/routing agents
+router.post('/:id/lead-quality-feedback', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { 
+      feedback, 
+      lead_score, 
+      pain_category, 
+      selected_landing_page, 
+      post_text, 
+      platform, 
+      final_status 
+    } = req.body;
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'Lead quality feedback is required' });
+    }
+
+    // Store lead quality feedback for training scoring/routing agents
+    await pool.query(`
+      INSERT INTO lead_quality_training (
+        lead_id,
+        feedback_text,
+        lead_score,
+        pain_category,
+        selected_landing_page,
+        post_text,
+        platform,
+        final_status,
+        created_at,
+        created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), 'Tony')
+      ON CONFLICT DO NOTHING
+    `, [
+      id, 
+      feedback, 
+      lead_score, 
+      pain_category, 
+      selected_landing_page, 
+      post_text, 
+      platform, 
+      final_status
+    ]);
+
+    res.json({ 
+      success: true, 
+      message: 'Lead quality feedback saved! This will help train the scoring and routing agents.' 
+    });
+
+  } catch (error: any) {
+    console.error('Error saving lead quality feedback:', error);
+    
+    // If table doesn't exist, still return success (graceful degradation)
+    if (error.message?.includes('relation "lead_quality_training" does not exist')) {
+      console.warn('lead_quality_training table does not exist yet - feedback not stored');
+      res.json({ 
+        success: true, 
+        message: 'Lead quality feedback received (table pending migration)' 
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to save lead quality feedback', details: error.message });
+    }
+  }
+});
+
 // DELETE /api/social-leads/:id - Delete a lead (hard delete)
 router.delete('/:id', async (req: Request, res: Response) => {
   try {

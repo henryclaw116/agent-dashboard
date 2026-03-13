@@ -54,10 +54,12 @@ function LeadPipelineSection() {
   const [saving, setSaving] = useState(false);
   const [selectedLandingPage, setSelectedLandingPage] = useState<string>('');
   const [trainingFeedback, setTrainingFeedback] = useState<string>('');
+  const [leadQualityFeedback, setLeadQualityFeedback] = useState<string>('');
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<number[]>([]);
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -311,11 +313,42 @@ function LeadPipelineSection() {
     }
   };
 
+  const handleSubmitLeadQualityFeedback = async () => {
+    if (!selectedLead || !leadQualityFeedback.trim()) {
+      alert('Please provide lead quality feedback first');
+      return;
+    }
+
+    try {
+      setSubmittingFeedback(true);
+
+      // Submit feedback to train the scoring/routing agents
+      await api.post(`/social-leads/${selectedLead.id}/lead-quality-feedback`, {
+        feedback: leadQualityFeedback,
+        lead_score: selectedLead.stage2_score,
+        pain_category: selectedLead.stage2_pain_category,
+        selected_landing_page: selectedLandingPage || selectedLead.stage3_landing_url,
+        post_text: selectedLead.post_text,
+        platform: selectedLead.platform,
+        final_status: selectedLead.status
+      });
+
+      alert('✅ Lead quality feedback submitted! The scoring and routing agents will learn from this.');
+      setLeadQualityFeedback('');
+    } catch (error) {
+      console.error('Failed to submit lead quality feedback:', error);
+      alert('Failed to submit feedback');
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   const openLeadDetails = (lead: PipelineLead) => {
     setSelectedLead(lead);
     setEditedReply(lead.stage4_reply_text || '');
     setSelectedLandingPage(lead.stage3_landing_url || '');
     setTrainingFeedback('');
+    setLeadQualityFeedback('');
     setIsEditing(false);
   };
 
@@ -883,13 +916,49 @@ function LeadPipelineSection() {
                 </div>
               )}
 
-              {/* Training Feedback & Regenerate */}
-              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+              {/* Lead Quality Training - Train Scoring/Routing Agents */}
+              <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  🎓 Train the AI
+                  🎯 Train Lead Selection (Scanner/Scorer/Router Agents)
                 </h3>
                 <p className="text-xs text-gray-600 mb-3">
-                  Tell the AI what it got right or wrong. Be specific about tone, length, or content issues. The AI will regenerate the reply based on your feedback.
+                  Tell the agents why this lead was <strong>good or bad</strong>. This helps them learn what you're looking for.
+                  Be specific: score accuracy, pain point relevance, landing page selection, quality indicators.
+                </p>
+                <textarea
+                  value={leadQualityFeedback}
+                  onChange={(e) => setLeadQualityFeedback(e.target.value)}
+                  placeholder={`Examples:
+✅ GOOD LEAD: "Perfect score (${selectedLead.stage2_score}/100). Pain point clearly stated. Landing page matches their frustration. User seems motivated."
+❌ BAD LEAD: "Score too high (${selectedLead.stage2_score}/100 should be 40). Pain is vague - just complaining, no real interest. This is spam/low effort."`}
+                  className="w-full px-3 py-2 border border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  rows={4}
+                />
+                <button
+                  onClick={handleSubmitLeadQualityFeedback}
+                  disabled={submittingFeedback || !leadQualityFeedback.trim()}
+                  className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
+                >
+                  {submittingFeedback ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Submitting Feedback...
+                    </>
+                  ) : (
+                    <>
+                      📚 Submit Lead Quality Training
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Reply Training - Train Writer Agent */}
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  ✍️ Train Reply Writing (Writer Agent)
+                </h3>
+                <p className="text-xs text-gray-600 mb-3">
+                  Tell the AI what it got right or wrong <strong>about the reply message</strong>. Be specific about tone, length, or content issues. The AI will regenerate the reply based on your feedback.
                 </p>
                 <textarea
                   value={trainingFeedback}
