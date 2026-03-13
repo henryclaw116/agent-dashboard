@@ -1,44 +1,30 @@
-const { Client } = require('pg');
+// Quick script to run database migration
+const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-// Use Supabase database (from init-supabase.js)
-const DATABASE_URL = 'postgresql://postgres.lovqxazutdfpaxvwzasc:RLT%28supabase%292%2C026@aws-0-us-west-2.pooler.supabase.com:6543/postgres';
+const pool = new Pool({
+  connectionString: 'postgresql://postgres.lovqxazutdfpaxvwzasc:RLT%28supabase%292%2C026@aws-0-us-west-2.pooler.supabase.com:6543/postgres'
+});
 
 async function runMigration() {
-  const client = new Client({
-    connectionString: DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
-
   try {
-    await client.connect();
-    console.log('✅ Connected to database');
-
-    // Read and execute migration
-    const migration = fs.readFileSync(
-      path.join(__dirname, 'database', 'migrations', '005_add_compute_nodes.sql'),
+    const sql = fs.readFileSync(
+      path.join(__dirname, 'database/migrations/013_add_reply_tracking_columns.sql'),
       'utf8'
     );
     
-    await client.query(migration);
-    console.log('✅ Migration 005_add_compute_nodes.sql executed successfully');
+    console.log('Running migration 013...');
+    await pool.query(sql);
+    console.log('✅ Migration 013 complete!');
+    console.log('   - Added reply_url column');
+    console.log('   - Added reply_screenshot_url column');
+    console.log('   - Added indexes');
     
-    // Verify consoles were added
-    const result = await client.query('SELECT name, type, status FROM consoles ORDER BY id');
-    console.log('\n📊 Consoles in database:');
-    result.rows.forEach(row => {
-      console.log(`  - ${row.name} (${row.type}) - ${row.status}`);
-    });
-
-    console.log('\n🎉 Migration complete!');
+    await pool.end();
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('❌ Migration failed:', error.message);
     process.exit(1);
-  } finally {
-    await client.end();
   }
 }
 
