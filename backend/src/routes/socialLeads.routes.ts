@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
-import * as https from 'https';
+import axios from 'axios';
+
 
 import OpenAI from 'openai';
 import autoPostingService from '../services/autoPosting.service';
@@ -854,6 +855,36 @@ router.post('/:id/auto-send', async (req: Request, res: Response) => {
     });
   }
 });
+
+
+// Discord webhook URL
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
+  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
+// Format message for Discord
+function formatPostingMessage(lead: any) {
+  return `🚀 NEW LEAD TO POST
+
+Platform: ${lead.platform}
+Post URL: ${lead.post_url}
+Lead ID: ${lead.id}
+
+POST THIS EXACTLY:
+---
+${lead.stage6_final_reply}
+---`;
+}
+
+// Send to Discord using axios
+async function sendToDiscord(message: string) {
+  try {
+    await axios.post(DISCORD_WEBHOOK, { content: message });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Discord send error:', error.message);
+    return { success: false, error: error.message };
+  }
+}
 
 export default router;
 
