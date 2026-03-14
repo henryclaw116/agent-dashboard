@@ -179,6 +179,11 @@ router.get('/', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
         COUNT(*) FILTER (WHERE status = 'SENT') as sent
       FROM social_leads
+      WHERE created_at >= CASE 
+        WHEN $1 = 'daily' THEN NOW() - INTERVAL '24 hours'
+        WHEN $1 = 'weekly' THEN NOW() - INTERVAL '7 days'
+        ELSE '1970-01-01'::timestamp
+      END
     `);
 
     // Convert stats to numbers
@@ -640,6 +645,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
 
 
 
