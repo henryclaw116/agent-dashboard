@@ -136,6 +136,13 @@ function LeadPipelineSection() {
 
   const handleCopyToClipboard = async () => {
     if (!selectedLead) return;
+
+    // Validate reply text exists
+    const replyText = editedReply || selectedLead.stage6_final_reply || '';
+    if (!replyText.trim()) {
+      alert('❌ No reply text found!\\n\\nThis lead doesn''t have a generated reply yet.\\n\\nPlease regenerate the reply or edit it manually.');
+      return;
+    }
     
     const finalReply = (editedReply || selectedLead.stage6_final_reply || '')
       .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
