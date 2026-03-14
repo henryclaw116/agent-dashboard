@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import OpenAI from 'openai';
-import { autoPostingService } from '../services/autoPosting.service';
+import autoPostingService from '../services/autoPosting.service';
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -103,6 +103,9 @@ router.get('/', async (req: Request, res: Response) => {
         case 'tracker':
           query += ` AND stage6_short_link IS NOT NULL`;
           break;
+        case 'ready':
+          query += ` AND status = 'READY_TO_SEND'`;
+          break;
         case 'sent':
           query += ` AND status = 'SENT'`;
           break;
@@ -159,6 +162,9 @@ router.get('/', async (req: Request, res: Response) => {
         case 'tracker':
           countQuery += ` AND stage6_short_link IS NOT NULL`;
           break;
+        case 'ready':
+          countQuery += ` AND status = 'READY_TO_SEND'`;
+          break;
         case 'sent':
           countQuery += ` AND status = 'SENT'`;
           break;
@@ -177,6 +183,7 @@ router.get('/', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
         COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
         COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
+        COUNT(*) FILTER (WHERE status = 'READY_TO_SEND') as ready,
         COUNT(*) FILTER (WHERE status = 'SENT') as sent
       FROM social_leads
       WHERE created_at >= CASE 
@@ -237,6 +244,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE stage4_reply_text IS NOT NULL) as writer,
         COUNT(*) FILTER (WHERE stage5_status IS NOT NULL) as dedup,
         COUNT(*) FILTER (WHERE stage6_short_link IS NOT NULL) as tracker,
+        COUNT(*) FILTER (WHERE status = 'READY_TO_SEND') as ready,
         COUNT(*) FILTER (WHERE status = 'SENT') as sent,
         COUNT(*) as total
       FROM social_leads
@@ -267,6 +275,7 @@ router.get('/stats', async (req: Request, res: Response) => {
         writer: parseInt(stageStats.writer) || 0,
         dedup: parseInt(stageStats.dedup) || 0,
         tracker: parseInt(stageStats.tracker) || 0,
+        ready: parseInt(stageStats.ready) || 0,
         sent: parseInt(stageStats.sent) || 0,
         total: parseInt(stageStats.total) || 0,
         awaiting_approval: parseInt(additionalStats.awaiting_approval) || 0,
@@ -448,6 +457,59 @@ router.post('/:id/sent', async (req: Request, res: Response) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
+// POST /api/social-leads/:id/trigger-post - Manually trigger posting for a lead
+router.post('/:id/trigger-post', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get lead
+    const leadResult = await pool.query('SELECT * FROM social_leads WHERE id = router.post('/:id/sent', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      UPDATE social_leads
+      SET 
+        status = 'SENT',
+        sent_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found' });', [id]);
+    if (leadResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    const lead = leadResult.rows[0];
+    
+    // Trigger auto-posting service
+    const postResult = await autoPostingService.postReply({
+      leadId: parseInt(id),
+      platform: lead.platform,
+      postUrl: lead.post_url,
+      replyText: lead.stage4_reply_text,
+      landingUrl: lead.stage3_landing_url
+    });
+    
+    if (postResult.success) {
+      res.json({ 
+        success: true, 
+        message: 'Posting triggered successfully',
+        leadId: id
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: postResult.error || 'Posting failed'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error triggering post:', error);
+    res.status(500).json({ error: 'Failed to trigger post', details: error.message });
+  }
+});
     }
 
     res.json({ 
@@ -645,6 +707,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
+
+
 
 
 

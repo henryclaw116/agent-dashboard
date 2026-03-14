@@ -26,12 +26,13 @@ interface PipelineLead {
 }
 
 const STAGES = [
-  { id: 'scanner', name: 'Scanner', icon: Users, color: 'blue' },
+  { id: 'scanner', name: 'Scanner', icon: Search, color: 'blue' },
   { id: 'scorer', name: 'Scorer', icon: TrendingUp, color: 'purple' },
   { id: 'router', name: 'Router', icon: Zap, color: 'yellow' },
-  { id: 'writer', name: 'Writer', icon: CheckCircle, color: 'green' },
+  { id: 'writer', name: 'Writer', icon: MessageSquare, color: 'green' },
   { id: 'dedup', name: 'Dedup', icon: AlertCircle, color: 'orange' },
   { id: 'tracker', name: 'Tracker', icon: LinkIcon, color: 'pink' },
+  { id: 'ready', name: 'Ready to Send', icon: CheckCircle, color: 'emerald' },
   { id: 'sent', name: 'Sent', icon: CheckCircle, color: 'green' }
 ];
 
@@ -107,7 +108,8 @@ function LeadPipelineSection() {
         writer: 0,
         dedup: 0,
         tracker: 0,
-        sent: 0
+        sent: 0,
+        ready: 0
       });
     } finally {
       setLoading(false);
@@ -181,25 +183,22 @@ function LeadPipelineSection() {
       const finalReply = (editedReply || selectedLead.stage4_reply_text || '')
         .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
       
-      // Approve and mark for auto-send
-      await api.post(`/social-leads/${selectedLead.id}/approve`, {
-        approved_response: finalReply,
-        reviewed_by: 'Tony',
-        auto_send: true
-      });
+      // Update reply text if edited
+      if (editedReply) {
+        await api.patch(`/social-leads/${selectedLead.id}`, {
+          stage4_reply_text: finalReply
+        });
+      }
       
-      // TODO: Trigger actual posting to platform
-      // This would call the social-pipeline agent to post the reply
-      // For now, just mark as sent since auto-posting isn't implemented yet
-      
-      // Temporarily mark as sent (until auto-posting is implemented)
+      // Mark as READY_TO_SEND and trigger posting
       await api.patch(`/social-leads/${selectedLead.id}`, {
-        status: 'SENT',
-        sent_at: new Date().toISOString(),
-        reply_url: selectedLead.post_url // Will be updated when actual posting works
+        status: 'READY_TO_SEND'
       });
       
-      alert('✅ Reply approved for auto-send! Marked as sent.');
+      // Trigger auto-post via backend (which calls MSI webhook)
+      await api.post(`/social-leads/${selectedLead.id}/trigger-post`);
+      
+      alert('? Reply posted! Check MSI for browser automation.');
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
@@ -1387,6 +1386,9 @@ Landing page: ${selectedLandingPage}`)) {
 }
 
 export default LeadPipelineSection;
+
+
+
 
 
 

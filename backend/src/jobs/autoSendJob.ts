@@ -46,7 +46,7 @@ async function runAutoSendCycle() {
     const leadsResult = await pool.query(`
       SELECT id, platform, post_url, stage4_reply_text, stage3_landing_url
       FROM social_leads
-      WHERE status = 'APPROVED'
+      WHERE status = 'READY_TO_SEND'
         AND stage6_short_link IS NOT NULL
         AND sent_at IS NULL
       ORDER BY created_at ASC
@@ -122,3 +122,4 @@ async function runAutoSendCycle() {
     isRunning = false;
   }
 }
+
