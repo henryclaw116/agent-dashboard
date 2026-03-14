@@ -65,7 +65,7 @@ router.get('/', async (req: Request, res: Response) => {
       stage,         // Filter by pipeline stage
       min_score,     // Minimum lead_score
       platform,      // Filter by platform
-      limit = 50,    // Results per page
+      limit = 1000,    // Results per page
       offset = 0,    // Pagination offset
       timeRange = 'all'  // Time filter: daily, weekly, or all
     } = req.query;
@@ -640,6 +640,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
 
 
 
