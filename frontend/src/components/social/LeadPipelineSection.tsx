@@ -72,6 +72,10 @@ function LeadPipelineSection() {
     setSelectedLeadIds([]); // Clear selections when stage changes
     const interval = setInterval(loadLeads, 10000); // Refresh every 10s
     return () => clearInterval(interval);
+      {/* DEPLOYMENT TEST - 2:17 PM */}
+      <div style={{backgroundColor: "#10b981", color: "white", padding: "10px", textAlign: "center", fontWeight: "bold"}}>
+        ✅ NEW VERSION DEPLOYED: 2:17 PM MDT - Default should be READY-TO-SEND
+      </div>
   }, [selectedStage, timeRange]);
 
   useEffect(() => {
