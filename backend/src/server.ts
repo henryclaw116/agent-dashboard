@@ -37,6 +37,7 @@ import { createBitlyAnalyticsRouter } from './routes/bitly-analytics.routes';
 import agentTrainingRoutes from './routes/agentTraining.routes';
 import settingsRoutes from './routes/settings.routes';
 import { startWeeklyTrainingJob } from './jobs/weeklyTrainingJob';
+import { startAutoSendJob } from './jobs/autoSendJob';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3002;
@@ -208,4 +209,5 @@ process.on('uncaughtException', (error: Error) => {
 
 // Start the server
 startServer();
+
 
