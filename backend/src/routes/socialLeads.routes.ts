@@ -669,7 +669,7 @@ router.post('/:id/trigger-post', async (req: Request, res: Response) => {
     
     // Get lead details
     const leadResult = await pool.query(
-      'SELECT * FROM social_leads WHERE id = $1',
+      'SELECT * FROM social_leads WHERE id::text = $1',
       [id]
     );
     
