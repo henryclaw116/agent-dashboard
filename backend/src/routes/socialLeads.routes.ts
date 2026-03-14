@@ -667,49 +667,81 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 
+
 // POST /api/social-leads/:id/trigger-post - Manually trigger posting for a lead
+// UPDATED: Now sends Discord message to Social Sender Agent instead of MSI webhook
 router.post('/:id/trigger-post', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    
-    // Get lead details
-    const leadResult = await pool.query(
-      'SELECT * FROM social_leads WHERE id::text = $1',
-      [id]
+    const leadId = parseInt(req.params.id);
+    console.log(`\n📤 Trigger-post request for lead ${leadId}`);
+
+    // Fetch lead from database
+    const result = await pool.query(
+      `SELECT id, platform, post_url, stage6_final_reply FROM social_leads WHERE id = $1`,
+      [leadId]
     );
-    
-    if (leadResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Lead not found' });
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Lead not found' });
     }
-    
-    const lead = leadResult.rows[0];
-    
-    // Trigger auto-posting service
-    const postResult = await autoPostingService.postReply({
-      leadId: parseInt(id),
-      platform: lead.platform,
-      postUrl: lead.post_url,
-      replyText: lead.stage4_reply_text,
-      landingUrl: lead.stage3_landing_url
+
+    const lead = result.rows[0];
+
+    // Validate required fields
+    if (!lead.platform || !lead.post_url || !lead.stage6_final_reply) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lead missing required fields (platform, post_url, or stage6_final_reply)'
+      });
+    }
+
+    console.log(`   Platform: ${lead.platform}`);
+    console.log(`   Post URL: ${lead.post_url}`);
+    console.log(`   Reply length: ${lead.stage6_final_reply.length} chars`);
+
+    // Format Discord message
+    const discordMessage = `🚀 NEW LEAD TO POST
+
+Platform: ${lead.platform}
+Post URL: ${lead.post_url}
+Lead ID: ${lead.id}
+
+POST THIS EXACTLY:
+---
+${lead.stage6_final_reply}
+---`;
+
+    console.log(`\n📨 Sending to Discord channel...`);
+
+    // Send to Discord using axios
+    const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
+      'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
+    await axios.post(DISCORD_WEBHOOK, { content: discordMessage });
+
+    console.log(`✅ Discord message sent for lead ${leadId}`);
+
+    // Update lead status to SENT
+    await pool.query(
+      `UPDATE social_leads 
+       SET status = 'SENT', triggered_at = NOW(), updated_at = NOW() 
+       WHERE id = $1`,
+      [leadId]
+    );
+
+    console.log(`✅ Lead ${leadId} status set to SENT`);
+
+    return res.json({
+      success: true,
+      message: 'Posted to Discord! Social Sender Agent will reply.',
+      reply_url: lead.post_url
     });
-    
-    if (postResult.success) {
-      res.json({ 
-        success: true, 
-        message: 'Posting triggered successfully',
-        leadId: id
-      });
-    } else {
-      res.status(500).json({ 
-        success: false, 
-        error: postResult.error || 'Posting failed'
-      });
-    }
+
   } catch (error: any) {
-    console.error('Error triggering post:', error);
-    res.status(500).json({ 
-      error: 'Failed to trigger post', 
-      details: error.message 
+    console.error('Error in trigger-post:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
