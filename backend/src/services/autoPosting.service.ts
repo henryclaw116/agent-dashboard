@@ -3,20 +3,55 @@ import axios from 'axios';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// MSI Tailscale IP and webhook port
-const MSI_WEBHOOK_URL = 'http://100.96.68.11:3001/trigger-post';
+// Discord webhook for Social Sender Agent
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
+  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
 
 /**
  * Auto-Posting Service
  * 
- * Triggers auto-post.js on MSI computer via webhook.
- * Browser automation runs on MSI, not on Railway/Cloud.
+ * NEW: Sends Discord messages to Social Sender Agent
+ * Social Sender Agent receives message and posts via browser control
  */
 export class AutoPostingService {
   
   /**
+   * Format Discord message for Social Sender Agent
+   */
+  private formatPostingMessage(params: {
+    leadId: number;
+    platform: string;
+    postUrl: string;
+    replyText: string;
+  }): string {
+    return `🚀 NEW LEAD TO POST
+
+Platform: ${params.platform}
+Post URL: ${params.postUrl}
+Lead ID: ${params.leadId}
+
+POST THIS EXACTLY:
+---
+${params.replyText}
+---`;
+  }
+
+  /**
+   * Send message to Discord channel
+   */
+  private async sendToDiscord(message: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      await axios.post(DISCORD_WEBHOOK, { content: message });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Discord send error:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Trigger posting for a specific lead
-   * Calls MSI webhook which runs auto-post.js locally
+   * NEW: Sends Discord message to Social Sender Agent
    */
   async postReply(params: {
     leadId: number;
@@ -31,40 +66,44 @@ export class AutoPostingService {
     error?: string;
   }> {
     try {
-      console.log(`📤 Triggering auto-post on MSI for lead #${params.leadId} (${params.platform})`);
+      console.log(`📤 Sending lead #${params.leadId} to Social Sender Agent (${params.platform})`);
 
-      // Call MSI webhook to trigger auto-post.js
-      const response = await axios.post(MSI_WEBHOOK_URL, {
-        leadId: params.leadId
-      }, {
-        timeout: 15000 // 5 second timeout for webhook acknowledgment
-      });
+      // Format Discord message
+      const message = this.formatPostingMessage(params);
 
-      if (response.data.success) {
-        console.log(`✅ Auto-post triggered on MSI for lead #${params.leadId}`);
+      // Send to Discord
+      const result = await this.sendToDiscord(message);
+
+      if (result.success) {
+        console.log(`✅ Lead #${params.leadId} sent to Social Sender Agent via Discord`);
         
-        // Return success - auto-post.js will update the lead when done
+        // Mark as triggered in database
+        await pool.query(
+          'UPDATE social_leads SET triggered_at = NOW(), updated_at = NOW() WHERE id = $1',
+          [params.leadId]
+        );
+        
         return {
           success: true,
-          reply_url: params.postUrl, // Will be updated by auto-post.js
+          reply_url: params.postUrl, // Will be updated by agent when posted
           screenshot_url: undefined
         };
       } else {
+        console.error(`❌ Failed to send to Discord:`, result.error);
         return {
           success: false,
-          error: response.data.error || 'Unknown error from MSI webhook'
+          error: `Discord error: ${result.error}`
         };
       }
     } catch (error: any) {
-      console.error(`❌ Failed to trigger auto-post on MSI:`, error.message);
+      console.error(`❌ Failed to send to Discord:`, error.message);
       
       return {
         success: false,
-        error: `MSI webhook error: ${error.message}`
+        error: `Error: ${error.message}`
       };
     }
   }
 }
 
 export default new AutoPostingService();
-
