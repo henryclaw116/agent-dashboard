@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@novnc/novnc": "^1.6.0",
