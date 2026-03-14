@@ -186,12 +186,7 @@ router.get('/', async (req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE status = 'READY_TO_SEND') as ready,
         COUNT(*) FILTER (WHERE status = 'SENT') as sent
       FROM social_leads
-      WHERE created_at >= CASE 
-        WHEN $1 = 'daily' THEN NOW() - INTERVAL '24 hours'
-        WHEN $1 = 'weekly' THEN NOW() - INTERVAL '7 days'
-        ELSE '1970-01-01'::timestamp
-      END
-    `, [timeRange]);
+    `);
 
     // Convert stats to numbers
     const stats = statsResult.rows[0];
@@ -276,7 +271,6 @@ router.get('/stats', async (req: Request, res: Response) => {
         dedup: parseInt(stageStats.dedup) || 0,
         tracker: parseInt(stageStats.tracker) || 0,
         ready: parseInt(stageStats.ready) || 0,
-        sent: parseInt(stageStats.sent) || 0,
         total: parseInt(stageStats.total) || 0,
         awaiting_approval: parseInt(additionalStats.awaiting_approval) || 0,
         sent: parseInt(additionalStats.sent) || 0,
@@ -299,6 +293,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
     }
+
+    const lead = result.rows[0];
 
     res.json({ success: true, lead: result.rows[0] });
   } catch (error: any) {
@@ -393,12 +389,24 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Lead not found' });
     }
 
+    const lead = result.rows[0];
+
+
+    
+
+
     // If auto_send is true, trigger actual posting to platform
     if (auto_send) {
       console.log(`🚀 Auto-send triggered for lead #${id}`);
       
       // Trigger posting in background (don't wait for completion)
-      autoPostingService.postLead(parseInt(id))
+      autoPostingService.postReply({
+        leadId: parseInt(id),
+        platform: lead.platform,
+        postUrl: lead.post_url,
+        replyText: lead.stage4_reply_text,
+        landingUrl: lead.stage3_landing_url
+      })
         .then(postResult => {
           if (postResult.success) {
             // Update with sent status
@@ -457,59 +465,6 @@ router.post('/:id/sent', async (req: Request, res: Response) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lead not found' });
-// POST /api/social-leads/:id/trigger-post - Manually trigger posting for a lead
-router.post('/:id/trigger-post', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Get lead
-    const leadResult = await pool.query('SELECT * FROM social_leads WHERE id = router.post('/:id/sent', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const result = await pool.query(`
-      UPDATE social_leads
-      SET 
-        status = 'SENT',
-        sent_at = NOW()
-      WHERE id = $1
-      RETURNING *
-    `, [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Lead not found' });', [id]);
-    if (leadResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Lead not found' });
-    }
-    
-    const lead = leadResult.rows[0];
-    
-    // Trigger auto-posting service
-    const postResult = await autoPostingService.postReply({
-      leadId: parseInt(id),
-      platform: lead.platform,
-      postUrl: lead.post_url,
-      replyText: lead.stage4_reply_text,
-      landingUrl: lead.stage3_landing_url
-    });
-    
-    if (postResult.success) {
-      res.json({ 
-        success: true, 
-        message: 'Posting triggered successfully',
-        leadId: id
-      });
-    } else {
-      res.status(500).json({ 
-        success: false, 
-        error: postResult.error || 'Posting failed'
-      });
-    }
-  } catch (error: any) {
-    console.error('Error triggering post:', error);
-    res.status(500).json({ error: 'Failed to trigger post', details: error.message });
-  }
-});
     }
 
     res.json({ 
@@ -707,7 +662,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-
 
 
 
