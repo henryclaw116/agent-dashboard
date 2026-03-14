@@ -826,9 +826,7 @@ router.post('/:id/auto-send', async (req: Request, res: Response) => {
     if (sendResult.success) {
       // Mark as triggered
       await pool.query(
-        `UPDATE social_leads
-         SET triggered_at = NOW(), updated_at = NOW()
-         WHERE id = $1`,
+        `UPDATE social_leads SET status = 'SENT', triggered_at = NOW(), updated_at = NOW() WHERE id = $1`,
         [leadId]
       );
 

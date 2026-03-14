@@ -79,7 +79,7 @@ ${params.replyText}
         
         // Mark as triggered in database
         await pool.query(
-          'UPDATE social_leads SET triggered_at = NOW(), updated_at = NOW() WHERE id = $1',
+          'UPDATE social_leads SET status = 'SENT', triggered_at = NOW(), updated_at = NOW() WHERE id = $1',
           [params.leadId]
         );
         
