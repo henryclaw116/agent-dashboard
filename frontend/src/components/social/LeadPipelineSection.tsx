@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, TrendingUp, CheckCircle, Clock, Zap, AlertCircle, Link as LinkIcon } from 'lucide-react';
+import { Users, TrendingUp, Search, MessageSquare, CheckCircle, Clock, Zap, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { api } from '../../api/api';
 
 interface PipelineLead {
@@ -1386,6 +1386,7 @@ Landing page: ${selectedLandingPage}`)) {
 }
 
 export default LeadPipelineSection;
+
 
 
 
