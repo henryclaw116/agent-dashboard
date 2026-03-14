@@ -9,7 +9,7 @@ const pool = new Pool({
 });
 
 // ============================================================================
-// GET ALL LEADS
+// GET ALL LEADS - with pipeline stage support
 // ============================================================================
 
 router.get('/', async (req: Request, res: Response) => {
@@ -19,9 +19,24 @@ router.get('/', async (req: Request, res: Response) => {
     let query = 'SELECT * FROM social_leads WHERE 1=1';
     const params: any[] = [];
     
+    // Handle pipeline stages vs status
     if (status) {
-      params.push(status);
-      query += ` AND status = $${params.length}`;
+      const stageMap: Record<string, string> = {
+        'SCANNER': 'stage1_status IS NOT NULL',
+        'SCORER': 'stage2_score IS NOT NULL',
+        'ROUTER': 'stage3_landing_url IS NOT NULL',
+        'WRITER': 'stage4_reply_text IS NOT NULL',
+        'DEDUP': 'stage5_final_status IS NOT NULL',
+        'TRACKER': 'stage6_ready_for_dashboard = true',
+        'READY_TO_SEND': "status = 'READY_TO_SEND'",
+        'SENT': "status = 'SENT'",
+        'ARCHIVED': "status = 'ARCHIVED'"
+      };
+      
+      const condition = stageMap[status.toString().toUpperCase()];
+      if (condition) {
+        query += ` AND ${condition}`;
+      }
     }
     
     if (platform) {
