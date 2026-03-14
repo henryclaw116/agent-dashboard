@@ -50,7 +50,7 @@ function LeadPipelineSection() {
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedStage, setSelectedStage] = useState<string>('ready-to-send');
+  const [selectedStage, setSelectedStage] = useState<string>('ready');
   const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
   const [editedReply, setEditedReply] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
