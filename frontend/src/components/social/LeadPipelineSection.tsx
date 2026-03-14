@@ -62,6 +62,8 @@ function LeadPipelineSection() {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [timeRange, setTimeRange] = useState<'daily' | 'weekly' | 'all'>('all');
+  const [autoSendEnabled, setAutoSendEnabled] = useState(false);
+  const [loadingToggle, setLoadingToggle] = useState(false);
 
   useEffect(() => {
     loadLeads();
@@ -73,6 +75,19 @@ function LeadPipelineSection() {
   useEffect(() => {
     setSelectedLeadIds([]); // Clear selections when switching between Active/Archive
   }, [showArchive]);
+
+  // Load auto-send setting on mount
+  useEffect(() => {
+    const loadAutoSendSetting = async () => {
+      try {
+        const response = await api.get('/settings/auto_send_enabled');
+        setAutoSendEnabled(response.data.value === 'true');
+      } catch (error) {
+        console.error('Failed to load auto-send setting:', error);
+      }
+    };
+    loadAutoSendSetting();
+  }, []);
 
   const loadLeads = async () => {
     try {
@@ -346,6 +361,28 @@ function LeadPipelineSection() {
   };
 
   
+  const handleAutoSendToggle = async (enabled: boolean) => {
+    try {
+      setLoadingToggle(true);
+      await api.put('/settings/auto_send_enabled', {
+        value: enabled.toString(),
+        updated_by: 'Tony'
+      });
+      setAutoSendEnabled(enabled);
+      
+      if (enabled) {
+        alert('✅ Auto-send ENABLED!\n\nApproved leads in Tracker stage will automatically be posted without your manual approval.');
+      } else {
+        alert('🛑 Auto-send DISABLED.\n\nYou must manually click "Auto-Send" to post replies.');
+      }
+    } catch (error) {
+      console.error('Failed to update auto-send setting:', error);
+      alert('Failed to update setting');
+    } finally {
+      setLoadingToggle(false);
+    }
+  };
+
   const promoteToScorer = async () => {
     if (!selectedLead) return;
     
@@ -671,6 +708,35 @@ Landing page: ${selectedLandingPage}`)) {
             >
               Archive
             </button>
+          </div>
+
+          {/* Auto-Send Toggle */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoSendEnabled}
+                  onChange={(e) => handleAutoSendToggle(e.target.checked)}
+                  disabled={loadingToggle}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+              <span className="ml-3 text-sm font-medium text-gray-900 flex items-center gap-2">
+                <span>🤖 Auto-Send</span>
+                {autoSendEnabled ? (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-bold">ON</span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">OFF</span>
+                )}
+              </span>
+            </div>
+            {autoSendEnabled && (
+              <span className="text-xs text-green-700 ml-2">
+                Agent posting automatically
+              </span>
+            )}
           </div>
 
           <select
@@ -1321,6 +1387,9 @@ Landing page: ${selectedLandingPage}`)) {
 }
 
 export default LeadPipelineSection;
+
+
+
 
 
 

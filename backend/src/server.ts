@@ -35,6 +35,7 @@ import orchestrationRoutes from './routes/orchestration.routes';
 import relationshipsRoutes from './routes/relationships.routes';
 import { createBitlyAnalyticsRouter } from './routes/bitly-analytics.routes';
 import agentTrainingRoutes from './routes/agentTraining.routes';
+import settingsRoutes from './routes/settings.routes';
 import { startWeeklyTrainingJob } from './jobs/weeklyTrainingJob';
 
 const app: Express = express();
@@ -100,7 +101,8 @@ app.use('/api/social-leads', socialLeadsRoutes);
 app.use('/api/bitly-analytics', createBitlyAnalyticsRouter(db));
 app.use('/api/orchestration', orchestrationRoutes);
 app.use('/api/relationships', relationshipsRoutes);
-app.use('/api/agent-training', agentTrainingRoutes); // Training routes registered
+app.use('/api/agent-training', agentTrainingRoutes);
+app.use('/api/settings', settingsRoutes); // Training routes registered
 
 // 404 handler
 app.use((req, res) => {
@@ -206,3 +208,4 @@ process.on('uncaughtException', (error: Error) => {
 
 // Start the server
 startServer();
+
