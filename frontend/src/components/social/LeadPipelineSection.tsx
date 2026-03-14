@@ -1,3 +1,4 @@
+// Force rebuild: 2026-03-14 14:14:13 - Default to ready-to-send
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, Search, MessageSquare, CheckCircle, Clock, Zap, AlertCircle, Link as LinkIcon } from 'lucide-react';
 import { api } from '../../api/api';
