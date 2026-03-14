@@ -921,9 +921,9 @@ Landing page: ${selectedLandingPage}`)) {
 
                     {/* Reply Draft (if exists) */}
                     {lead.stage4_reply_text && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                        <strong className="text-blue-900">Draft Reply:</strong>
-                        <p className="text-blue-800 mt-1">{lead.stage4_reply_text}</p>
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        <strong className="text-green-900">Our Reply (AI-generated):</strong>
+                        <p className="text-green-800 mt-1 whitespace-pre-wrap">{lead.stage6_final_reply || lead.stage4_reply_text}</p>
                       </div>
                     )}
                   </div>
@@ -1093,7 +1093,7 @@ Landing page: ${selectedLandingPage}`)) {
                     )}
                   </div>
                   {!isEditing ? (
-                    <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                    <div className="bg-green-50 border border-green-200 rounded p-4">
                       <p className="text-blue-900 whitespace-pre-wrap">{selectedLead.stage4_reply_text}</p>
                     </div>
                   ) : (
@@ -1304,7 +1304,7 @@ Landing page: ${selectedLandingPage}`)) {
                   
               {/* Stage Promotion Buttons */}
               {!showArchive && (
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <h3 className="text-sm font-semibold text-blue-900 mb-2">? Manual Stage Promotion</h3>
                   <p className="text-xs text-blue-700 mb-3">Manually push this lead forward through the pipeline</p>
                   
