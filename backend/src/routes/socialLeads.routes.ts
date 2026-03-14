@@ -1,114 +1,21 @@
-// Force rebuild: 2026-03-14 13:49:49
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import axios from 'axios';
 
-    }
+const router = Router();
 
-    const lead = result.rows[0];
-
-    // Validate required fields
-    if (!lead.platform) {
-      return res.status(400).json({
-        success: false,
-        error: 'Lead has no platform specified'
-      });
-    }
-
-    if (!lead.post_url) {
-      return res.status(400).json({
-        success: false,
-        error: 'Lead has no post URL'
-      });
-    }
-
-    if (!lead.stage6_final_reply) {
-      return res.status(400).json({
-        success: false,
-        error: 'Lead has no reply text (stage6_final_reply is empty)'
-      });
-    }
-
-    console.log(`   Platform: ${lead.platform}`);
-    console.log(`   Post URL: ${lead.post_url}`);
-    console.log(`   Reply length: ${lead.stage6_final_reply.length} chars`);
-
-    // Format Discord message
-    const discordMessage = formatPostingMessage(lead);
-
-    console.log(`\n📨 Sending to Discord channel...`);
-
-    // Send to Discord
-    const sendResult = await sendToDiscord(discordMessage);
-
-    if (sendResult.success) {
-      // Mark as triggered
-      await pool.query(
-        `UPDATE social_leads SET status = 'SENT', triggered_at = NOW(), updated_at = NOW() WHERE id = $1`,
-        [leadId]
-      );
-
-      console.log(`✅ Lead ${leadId} sent to Social Sender Agent`);
-
-      return res.json({
-        success: true,
-        message: `Posted to Discord! Social Sender Agent will reply to ${lead.post_url}`
-      });
-    } else {
-      console.error(`❌ Failed to send to Discord:`, sendResult.error);
-
-      return res.status(500).json({
-        success: false,
-        error: `Failed to send to Discord: ${sendResult.error}`
-      });
-    }
-
-  } catch (error: any) {
-    console.error('Error in auto-send:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
 });
-
-// Discord webhook URL
-
-// Format message for Discord
-function formatPostingMessage(lead: any) {
-  return `🚀 NEW LEAD TO POST
-
-Platform: ${lead.platform}
-Post URL: ${lead.post_url}
-Lead ID: ${lead.id}
-
-POST THIS EXACTLY:
----
-${lead.stage6_final_reply}
----`;
-}
-
-// Send to Discord using axios
-async function sendToDiscord(message: string) {
-  try {
-    await axios.post(DISCORD_WEBHOOK, { content: message });
-    return { success: true };
-  } catch (error: any) {
-    console.error('Discord send error:', error.message);
-    return { success: false, error: error.message };
-  }
-}
-
 
 // ============================================================================
 // SEND TO SOCIAL SENDER AGENT
-// Simple Discord message trigger - rebuilt from scratch
+// Simple Discord message trigger
 // ============================================================================
 
 /**
- * POST /api/leads/:id/send
+ * POST /api/social-leads/:id/send
  * Sends lead to Social Sender Agent via Discord
- * This is the ONLY auto-send code - keep it simple!
  */
 router.post('/:id/send', async (req: Request, res: Response) => {
   const leadId = parseInt(req.params.id);
@@ -202,4 +109,3 @@ ${lead.stage6_final_reply}
 });
 
 export default router;
-
