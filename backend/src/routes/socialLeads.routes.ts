@@ -120,7 +120,7 @@ router.post('/:id/send', async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT id, platform, post_url, stage6_final_reply 
        FROM social_leads 
-       WHERE id = export default router;`,
+       WHERE id = $1`,
       [leadId]
     );
     
@@ -175,7 +175,7 @@ ${lead.stage6_final_reply}
     await pool.query(
       `UPDATE social_leads 
        SET status = 'SENT', triggered_at = NOW(), updated_at = NOW() 
-       WHERE id = export default router;`,
+       WHERE id = $1`,
       [leadId]
     );
     

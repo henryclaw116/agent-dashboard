@@ -137,7 +137,7 @@ function LeadPipelineSection() {
   const handleCopyToClipboard = async () => {
     if (!selectedLead) return;
     
-    const finalReply = (editedReply || selectedLead.stage4_reply_text || '')
+    const finalReply = (editedReply || selectedLead.stage6_final_reply || '')
       .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
     
     try {
@@ -185,13 +185,13 @@ function LeadPipelineSection() {
     try {
       setSaving(true);
       
-      const finalReply = (editedReply || selectedLead.stage4_reply_text || '')
+      const finalReply = (editedReply || selectedLead.stage6_final_reply || '')
         .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '');
       
       // Update reply text if edited
       if (editedReply) {
         await api.patch(`/social-leads/${selectedLead.id}`, {
-          stage4_reply_text: finalReply
+          stage6_final_reply: finalReply
         });
       }
       
@@ -203,7 +203,7 @@ function LeadPipelineSection() {
       // Trigger auto-post via backend (which calls MSI webhook)
       await api.post(`/social-leads/${selectedLead.id}/send`);
       
-      alert('? Reply posted! Check MSI for browser automation.');
+      alert('? Reply posted! Reply sent to Discord! Social Sender Agent will post it..');
       setSelectedLead(null);
       loadLeads();
     } catch (error) {
@@ -300,7 +300,7 @@ function LeadPipelineSection() {
       const response = await api.post(`/social-leads/${selectedLead.id}/regenerate-reply`, {
         feedback: trainingFeedback,
         landing_page: selectedLandingPage || selectedLead.stage3_landing_url,
-        original_reply: selectedLead.stage4_reply_text,
+        original_reply: selectedLead.stage6_final_reply,
         post_text: selectedLead.post_text,
         pain_category: selectedLead.stage2_pain_category
       });
@@ -1068,7 +1068,7 @@ Landing page: ${selectedLandingPage}`)) {
                 )}
               </div>
 
-              {selectedLead.stage4_reply_text && (
+              {selectedLead.stage6_final_reply && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-semibold text-gray-700">Draft Reply</h3>
@@ -1089,7 +1089,7 @@ Landing page: ${selectedLandingPage}`)) {
                           Save
                         </button>
                         <button
-                          onClick={() => { setIsEditing(false); setEditedReply(selectedLead.stage4_reply_text || ''); }}
+                          onClick={() => { setIsEditing(false); setEditedReply(selectedLead.stage6_final_reply || ''); }}
                           className="text-sm text-gray-600 hover:underline"
                         >
                           Cancel
@@ -1099,7 +1099,7 @@ Landing page: ${selectedLandingPage}`)) {
                   </div>
                   {!isEditing ? (
                     <div className="bg-green-50 border border-green-200 rounded p-4">
-                      <p className="text-blue-900 whitespace-pre-wrap">{selectedLead.stage4_reply_text}</p>
+                      <p className="text-blue-900 whitespace-pre-wrap">{selectedLead.stage6_final_reply}</p>
                     </div>
                   ) : (
                     <textarea
@@ -1111,14 +1111,14 @@ Landing page: ${selectedLandingPage}`)) {
                   )}
 
                   {/* Final Message Preview with actual link */}
-                  {(selectedLead.stage4_reply_text || editedReply) && (selectedLandingPage || selectedLead.stage3_landing_url) && (
+                  {(selectedLead.stage6_final_reply || editedReply) && (selectedLandingPage || selectedLead.stage3_landing_url) && (
                     <div className="mt-4">
                       <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         👁️ Final Message Preview (what will actually be sent)
                       </h4>
                       <div className="bg-green-50 border border-green-300 rounded p-4">
                         <p className="text-green-900 whitespace-pre-wrap text-sm">
-                          {(editedReply || selectedLead.stage4_reply_text || '')
+                          {(editedReply || selectedLead.stage6_final_reply || '')
                             .replace('[LINK]', selectedLandingPage || selectedLead.stage3_landing_url || '')}
                         </p>
                         <div className="mt-3 pt-3 border-t border-green-200">
@@ -1339,7 +1339,7 @@ Landing page: ${selectedLandingPage}`)) {
                     )}
                     
                     {/* Router → Writer */}
-                    {selectedLead.stage3_landing_url && !selectedLead.stage4_reply_text && (
+                    {selectedLead.stage3_landing_url && !selectedLead.stage6_final_reply && (
                       <button
                         onClick={promoteToWriter}
                         disabled={saving || !selectedLandingPage}
