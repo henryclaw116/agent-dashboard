@@ -1,10 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
-import fetch from 'node-fetch';
+import * as https from 'https';
+
 import OpenAI from 'openai';
 import autoPostingService from '../services/autoPosting.service';
 
 const router = Router();
+
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
