@@ -140,7 +140,7 @@ function LeadPipelineSection() {
     // Validate reply text exists
     const replyText = editedReply || selectedLead.stage6_final_reply || '';
     if (!replyText.trim()) {
-      alert('❌ No reply text found!\\n\\nThis lead doesn''t have a generated reply yet.\\n\\nPlease regenerate the reply or edit it manually.');
+      alert('❌ No reply text found!\\n\\nThis lead does not have a generated reply yet.\\n\\nPlease regenerate the reply or edit it manually.');
       return;
     }
     
