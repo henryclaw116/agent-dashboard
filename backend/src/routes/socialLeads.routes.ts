@@ -661,7 +661,55 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+
+// POST /api/social-leads/:id/trigger-post - Manually trigger posting for a lead
+router.post('/:id/trigger-post', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get lead details
+    const leadResult = await pool.query(
+      'SELECT * FROM social_leads WHERE id = export default router;',
+      [id]
+    );
+    
+    if (leadResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    const lead = leadResult.rows[0];
+    
+    // Trigger auto-posting service
+    const postResult = await autoPostingService.postReply({
+      leadId: parseInt(id),
+      platform: lead.platform,
+      postUrl: lead.post_url,
+      replyText: lead.stage4_reply_text,
+      landingUrl: lead.stage3_landing_url
+    });
+    
+    if (postResult.success) {
+      res.json({ 
+        success: true, 
+        message: 'Posting triggered successfully',
+        leadId: id
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: postResult.error || 'Posting failed'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error triggering post:', error);
+    res.status(500).json({ 
+      error: 'Failed to trigger post', 
+      details: error.message 
+    });
+  }
+});
 export default router;
+
 
 
 
