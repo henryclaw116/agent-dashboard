@@ -100,7 +100,7 @@ function LeadPipelineSection() {
       console.log('Loading leads for stage:', selectedStage, 'timeRange:', timeRange);
       const response = await api.get(`/social-leads?status=${selectedStage === "ready" ? "READY_TO_SEND" : selectedStage.toUpperCase()}&timeRange=${timeRange}`);
       console.log('Response:', response.data);
-      setLeads(response.data.leads || []);
+      setLeads(Array.isArray(response.data) ? response.data : []);
       setStats(response.data.stats || null);
       console.log('Stats loaded:', response.data.stats);
     } catch (error) {
