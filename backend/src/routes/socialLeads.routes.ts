@@ -2,6 +2,10 @@ import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import axios from 'axios';
 
+// Discord webhook for Social Sender Agent (used by multiple routes)
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
+  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
 
 import OpenAI from 'openai';
 import autoPostingService from '../services/autoPosting.service';
@@ -714,8 +718,7 @@ ${lead.stage6_final_reply}
     console.log(`\n📨 Sending to Discord channel...`);
 
     // Send to Discord using axios
-    const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
-      'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+    
 
     await axios.post(DISCORD_WEBHOOK, { content: discordMessage });
 
@@ -747,8 +750,7 @@ ${lead.stage6_final_reply}
 });
 
 // Discord webhook for Social Sender Agent
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
-  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
 
 /**
  * Format Discord message for Social Sender Agent
@@ -888,8 +890,7 @@ router.post('/:id/auto-send', async (req: Request, res: Response) => {
 
 
 // Discord webhook URL
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
-  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
 
 // Format message for Discord
 function formatPostingMessage(lead: any) {
