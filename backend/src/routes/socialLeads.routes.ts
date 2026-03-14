@@ -103,6 +103,9 @@ router.get('/', async (req: Request, res: Response) => {
         case 'tracker':
           query += ` AND stage6_short_link IS NOT NULL`;
           break;
+        case 'sent':
+          query += ` AND status = 'SENT'`;
+          break;
       }
     }
 
@@ -155,6 +158,9 @@ router.get('/', async (req: Request, res: Response) => {
           break;
         case 'tracker':
           countQuery += ` AND stage6_short_link IS NOT NULL`;
+          break;
+        case 'sent':
+          countQuery += ` AND status = 'SENT'`;
           break;
       }
     }
@@ -634,5 +640,6 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
 
 
