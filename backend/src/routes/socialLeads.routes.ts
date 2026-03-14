@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import fetch from 'node-fetch';
 import OpenAI from 'openai';
 import autoPostingService from '../services/autoPosting.service';
 
@@ -708,6 +709,149 @@ router.post('/:id/trigger-post', async (req: Request, res: Response) => {
     });
   }
 });
+
+// Discord webhook for Social Sender Agent
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 
+  'https://discord.com/api/webhooks/1482413401111265332/hG20sp7JEDqGTTIyTM8taCkFNxRrxIW02zPoeR2ONb-IQd80-A0FC4piuLWgd5WTM2y9';
+
+/**
+ * Format Discord message for Social Sender Agent
+ */
+function formatPostingMessage(lead: any) {
+  return `🚀 NEW LEAD TO POST
+
+Platform: ${lead.platform}
+Post URL: ${lead.post_url}
+Lead ID: ${lead.id}
+
+POST THIS EXACTLY:
+---
+${lead.stage6_final_reply}
+---`;
+}
+
+/**
+ * Send message to Discord channel
+ */
+async function sendToDiscord(message: string) {
+  try {
+    const response = await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: message })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord API error: ${response.statusText}`);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error sending Discord message:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * AUTO-SEND ROUTE
+ * POST /api/leads/:id/auto-send
+ * Sends lead info to Discord for Social Sender Agent to post
+ */
+router.post('/:id/auto-send', async (req: Request, res: Response) => {
+  try {
+    const leadId = parseInt(req.params.id);
+    
+    console.log(`\n📤 Auto-send request for lead ${leadId}`);
+
+    // Fetch lead from database
+    const result = await pool.query(
+      `SELECT 
+        id,
+        platform,
+        post_url,
+        stage6_final_reply,
+        status
+      FROM social_leads
+      WHERE id = $1`,
+      [leadId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lead not found'
+      });
+    }
+
+    const lead = result.rows[0];
+
+    // Validate required fields
+    if (!lead.platform) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lead has no platform specified'
+      });
+    }
+
+    if (!lead.post_url) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lead has no post URL'
+      });
+    }
+
+    if (!lead.stage6_final_reply) {
+      return res.status(400).json({
+        success: false,
+        error: 'Lead has no reply text (stage6_final_reply is empty)'
+      });
+    }
+
+    console.log(`   Platform: ${lead.platform}`);
+    console.log(`   Post URL: ${lead.post_url}`);
+    console.log(`   Reply length: ${lead.stage6_final_reply.length} chars`);
+
+    // Format Discord message
+    const discordMessage = formatPostingMessage(lead);
+
+    console.log(`\n📨 Sending to Discord channel...`);
+
+    // Send to Discord
+    const sendResult = await sendToDiscord(discordMessage);
+
+    if (sendResult.success) {
+      // Mark as triggered
+      await pool.query(
+        `UPDATE social_leads
+         SET triggered_at = NOW(), updated_at = NOW()
+         WHERE id = $1`,
+        [leadId]
+      );
+
+      console.log(`✅ Lead ${leadId} sent to Social Sender Agent`);
+
+      return res.json({
+        success: true,
+        message: `Posted to Discord! Social Sender Agent will reply to ${lead.post_url}`
+      });
+    } else {
+      console.error(`❌ Failed to send to Discord:`, sendResult.error);
+
+      return res.status(500).json({
+        success: false,
+        error: `Failed to send to Discord: ${sendResult.error}`
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Error in auto-send:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 export default router;
 
 
