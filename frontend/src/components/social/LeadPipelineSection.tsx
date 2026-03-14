@@ -196,7 +196,7 @@ function LeadPipelineSection() {
       });
       
       // Trigger auto-post via backend (which calls MSI webhook)
-      await api.post(`/social-leads/${selectedLead.id}/trigger-post`);
+      await api.post(`/leads/${lead.id}/send`);
       
       alert('? Reply posted! Check MSI for browser automation.');
       setSelectedLead(null);
