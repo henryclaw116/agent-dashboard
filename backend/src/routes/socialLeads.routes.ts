@@ -184,7 +184,7 @@ router.get('/', async (req: Request, res: Response) => {
         WHEN $1 = 'weekly' THEN NOW() - INTERVAL '7 days'
         ELSE '1970-01-01'::timestamp
       END
-    `);
+    `, [timeRange]);
 
     // Convert stats to numbers
     const stats = statsResult.rows[0];
