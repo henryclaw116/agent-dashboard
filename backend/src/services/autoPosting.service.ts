@@ -37,7 +37,7 @@ export class AutoPostingService {
       const response = await axios.post(MSI_WEBHOOK_URL, {
         leadId: params.leadId
       }, {
-        timeout: 5000 // 5 second timeout for webhook acknowledgment
+        timeout: 15000 // 5 second timeout for webhook acknowledgment
       });
 
       if (response.data.success) {
@@ -67,3 +67,4 @@ export class AutoPostingService {
 }
 
 export default new AutoPostingService();
+
