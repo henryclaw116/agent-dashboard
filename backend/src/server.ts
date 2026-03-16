@@ -132,32 +132,27 @@ async function startServer() {
     // await initializeDatabase(db);
     console.log('⏭️  Skipping auto-initialization (will do manually)');
 
-    // Start HTTP server after DB is ready
-    const server = http.createServer(app);
-    
-    // Setup VNC WebSocket proxy
-    setupVNCProxy(server);
-    
-    server.listen(PORT, () => {
-      console.log(`🚀 Agent Dashboard API running on port ${PORT}`);
-    });
+    // TEMP MIGRATION - DELETE AFTER RUNNING
+app.get('/run-migration', async (req: any, res: any) => {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    await pool.query(`
+      ALTER TABLE social_leads ADD COLUMN IF NOT EXISTS auto_send_enabled BOOLEAN DEFAULT false;
+      ALTER TABLE social_leads ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100);
+      ALTER TABLE social_leads ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+      ALTER TABLE social_leads ADD COLUMN IF NOT EXISTS approval_notes TEXT;
+      UPDATE social_leads SET status = 'PENDING_APPROVAL' WHERE stage6_ready_for_dashboard = true AND status NOT IN ('SENT','FAILED','REJECTED') AND auto_send_enabled = false;
+      CREATE INDEX IF NOT EXISTS idx_social_leads_pending_approval ON social_leads(status) WHERE status = 'PENDING_APPROVAL';
+      CREATE INDEX IF NOT EXISTS idx_social_leads_auto_send ON social_leads(auto_send_enabled, status);
+    `);
+    res.json({ success: true, message: 'Migration complete' });
+  } catch (e: any) {
+    res.json({ success: false, error: e.message });
+  }
+});
 
-    // WebSocket server for real-time updates
-    const wss = new WebSocketServer({ port: parseInt(WS_PORT as string) });
-
-    wss.on('connection', (ws) => {
-      console.log('WebSocket client connected');
-
-      ws.on('message', (message) => {
-        console.log('Received:', message.toString());
-      });
-
-      ws.on('close', () => {
-        console.log('WebSocket client disconnected');
-      });
-
-      // Send welcome message
-      ws.send(JSON.stringify({ type: 'connected', message: 'Dashboard WebSocket connected' }));
+// Start HTTP server after DB is ready
+const server = http.createServer(app);
     });
 
     // Broadcast function for real-time updates
